@@ -1,0 +1,100 @@
+"""Architecture invariant: no broker integration, no execution logic, no advisory language.
+
+Scans backend/app/ and frontend/src/ (when present) for patterns that would indicate:
+- Broker API library imports
+- Order execution or paper-trading function/class definitions
+- Advisory signal function or variable names
+
+Policy documents (docs/, README.md, PROJECT_BRAIN.md) and the test suite itself are
+deliberately excluded. Policy files must mention prohibited words in order to forbid them;
+scanning them would produce false positives.
+"""
+
+import re
+from pathlib import Path
+
+_REPO_ROOT = Path(__file__).parent.parent.parent.parent
+_APP_DIR = _REPO_ROOT / "backend" / "app"
+_FRONTEND_SRC = _REPO_ROOT / "frontend" / "src"
+
+# Broker API library import statements
+_BROKER_IMPORT_RE = re.compile(
+    r"^\s*(import|from)\s+"
+    r"(alpaca|alpaca_trade_api|ib_insync|ibkr|ccxt|robinhood|"
+    r"td_ameritrade|tda|tastytrade|tradier|schwab|coinbase|binance|"
+    r"kraken|ftx|etrade|fidelity_api|broker)",
+    re.MULTILINE | re.IGNORECASE,
+)
+
+# Execution and paper-trading function or class definitions
+_EXECUTION_DEF_RE = re.compile(
+    r"\b(def|class)\s+"
+    r"(place_order|execute_order|submit_order|cancel_order|modify_order|"
+    r"buy_stock|sell_stock|buy_shares|sell_shares|"
+    r"paper_trade|run_paper_trade|simulate_trade|"
+    r"run_backtest|execute_backtest|backtest_strategy|"
+    r"TradeExecutor|OrderManager|BrokerClient|PaperTrader|Backtester)\b"
+)
+
+# Advisory signal function names and variable assignments
+_ADVISORY_RE = re.compile(
+    r"\bdef\s+(get_buy_signal|get_sell_signal|get_hold_recommendation|"
+    r"generate_trade_signal|get_trade_recommendation|"
+    r"compute_signal|emit_signal|send_trade_signal)\b"
+    r"|"
+    r"\b(buy_signal|sell_signal|hold_signal|hold_recommendation|"
+    r"trade_recommendation|trade_signal)\s*="
+)
+
+
+def _source_files() -> list[Path]:
+    files: list[Path] = []
+    if _APP_DIR.exists():
+        files.extend(_APP_DIR.rglob("*.py"))
+    if _FRONTEND_SRC.exists():
+        files.extend(_FRONTEND_SRC.rglob("*.ts"))
+        files.extend(_FRONTEND_SRC.rglob("*.tsx"))
+    return files
+
+
+def test_no_broker_integration() -> None:
+    """No broker API library is imported anywhere in application source code."""
+    violations: list[str] = []
+    for path in _source_files():
+        text = path.read_text(encoding="utf-8", errors="replace")
+        if _BROKER_IMPORT_RE.search(text):
+            violations.append(str(path))
+    assert not violations, (
+        "Broker API imports detected in application source.\n"
+        "Broker integration is off-roadmap per RISK_POLICY.md §3.\n"
+        "Affected files:\n" + "\n".join(f"  {v}" for v in violations)
+    )
+
+
+def test_no_execution_logic() -> None:
+    """No order execution, paper trading, or backtesting definitions in application source."""
+    violations: list[str] = []
+    for path in _source_files():
+        text = path.read_text(encoding="utf-8", errors="replace")
+        if _EXECUTION_DEF_RE.search(text):
+            violations.append(str(path))
+    assert not violations, (
+        "Execution or paper-trading logic detected in application source.\n"
+        "Automation ceiling is read→compute→notify per RISK_POLICY.md §7.\n"
+        "Affected files:\n" + "\n".join(f"  {v}" for v in violations)
+    )
+
+
+def test_no_advisory_language_in_source() -> None:
+    """No advisory signal functions or variables in application source."""
+    violations: list[str] = []
+    for path in _source_files():
+        text = path.read_text(encoding="utf-8", errors="replace")
+        if _ADVISORY_RE.search(text):
+            violations.append(str(path))
+    assert not violations, (
+        "Advisory signal language detected in application source.\n"
+        "The system describes facts; it never generates trade signals.\n"
+        "See RISK_POLICY.md §3 and ALERT_POLICY.md.\n"
+        "Affected files:\n" + "\n".join(f"  {v}" for v in violations)
+    )
