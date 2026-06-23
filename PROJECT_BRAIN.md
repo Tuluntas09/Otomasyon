@@ -173,7 +173,19 @@ Full detail: `docs/MVP_SCOPE.md`.
   backtesting, no external market data, no scheduler, no notifications, no new API routes,
   no new persistence tables, no new runtime dependencies introduced.
 
-**v0.1 implementation accepted. Phase 8A, 8B, 8C accepted.**
+- **Phase 8D (API contract documentation + API error taxonomy — Option B, Tier 2):**
+  🔄 **implementation complete — awaiting acceptance audit.**
+  `docs/API_CONTRACT.md` created, documenting the full JSON response shape for all
+  three read-only routes (`GET /health`, `GET /reports/daily`, `GET /reports/weekly`),
+  including all Phase 7B–8C fields, four representative example payloads, and a
+  complete API error taxonomy covering all HTTP 422 failure modes with both the
+  custom error shape (`detail` as dict) and the FastAPI-generated shape (`detail` as
+  list). Boundary and safety notes section added. No application code changed.
+  No new routes. No new dependencies. `701 passed, 0 skipped` — all invariants green.
+  Decisions D-087 through D-092 recorded. Phase 8D is not yet marked accepted.
+  Phase 8E has not started.
+
+**v0.1 implementation accepted. Phase 8A, 8B, 8C accepted. Phase 8D awaiting acceptance audit.**
 Phase 8 further work requires its own dated DECISIONS.md entry and explicit
 human approval before any code is written.
 
@@ -250,6 +262,12 @@ The authoritative log is `docs/DECISIONS.md`. Key locks:
 - **D-084** Phase 8C data model: four new fields on TickerQuality; no new API routes.
 - **D-085** Phase 8C architecture invariant: four new tests; total 12 invariant tests.
 - **D-086** Phase 8C test gate: 701 passed, 0 skipped.
+- **D-087** Phase 8D boundary: API contract documentation + error taxonomy, documentation-only.
+- **D-088** Phase 8D documentation scope: all Phase 7B–8C response fields covered.
+- **D-089** Phase 8D example payloads: four representative scenarios.
+- **D-090** Phase 8D optional contract tests: deferred from Phase 8D.
+- **D-091** Phase 8D architecture invariant: unchanged at 12 tests.
+- **D-092** Phase 8D test gate: 701 passed, 0 skipped (unchanged).
 
 Any change to these requires a new dated entry in `DECISIONS.md` (append-only in spirit).
 
@@ -270,6 +288,7 @@ Any change to these requires a new dated entry in `DECISIONS.md` (append-only in
 | `ROADMAP.md` | Phased plan + per-phase acceptance criteria |
 | `TEST_PLAN.md` | Test categories, edge cases, gates |
 | `DECISIONS.md` | Append-only decision log |
+| `API_CONTRACT.md` | Current API contract — response shapes, field types, error taxonomy, examples |
 | `PHASE1_SKELETON_PLAN.md` | The Phase 1 skeleton spec |
 | `PROJECT_BRAIN.md` | **This file — the entry point** |
 | `docs/reports/` | Future phase closeout reports |
@@ -358,4 +377,5 @@ honest. If it ever drifts from reality, fix it before doing anything else.*
 - Phase 8A accepted (data quality analytics — Option B, Tier 2)
 - Phase 8B accepted (report explainability + architecture hardening)
 - Phase 8C accepted (local price-date gap diagnostics + repository hardening)
-- Further Phase 8 work requires deliberate human approval
+- Phase 8D implementation complete — awaiting acceptance audit (API contract documentation + error taxonomy)
+- Phase 8E has not started; requires deliberate human approval

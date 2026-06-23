@@ -17,6 +17,7 @@
 | 8A | Data quality analytics (Option B implementation) | ✅ accepted |
 | 8B | Report explainability + architecture hardening (Option B, Tier 2) | ✅ accepted |
 | 8C | Local price-date gap diagnostics + repository hardening (Option B, Tier 2) | ✅ accepted |
+| 8D | API Contract Documentation + API Error Taxonomy (Option B, Tier 2) | 🔄 implementation complete — awaiting acceptance audit |
 
 ---
 
@@ -350,6 +351,33 @@ no new runtime dependencies.
 - Total test count: 701 passed, 0 skipped.
 
 **Status:** ✅ Accepted.
+
+---
+
+## Phase 8D — API Contract Documentation + API Error Taxonomy (Option B, Tier 2)
+
+**Scope:** Documentation-only phase within Tier 2. No application code changes.
+No new API routes, no new persistence tables, no new dependencies.
+
+**Key deliverables:**
+- `docs/API_CONTRACT.md` — complete API contract document covering `GET /health`,
+  `GET /reports/daily`, and `GET /reports/weekly`; all Phase 7B–8C response fields
+  and nested types; section ordering and presence conditions for both routes; four
+  representative example JSON payloads; full API error taxonomy covering all current
+  HTTP 422 failure modes and the two distinct error response shapes
+  (custom dict vs. FastAPI-generated list); boundary and safety notes.
+- `docs/DECISIONS.md` — D-087 through D-092 recorded.
+
+**Acceptance criteria:**
+- `docs/API_CONTRACT.md` present and covers all fields defined in D-088.
+- No application code changed. No `backend/app/` modules modified.
+- No new dependencies added to `pyproject.toml`.
+- No test files modified or added.
+- Architecture invariant unchanged: 12 tests.
+- Total test count unchanged: 701 passed, 0 skipped (D-092).
+- Phase 8E not started.
+
+**Status:** 🔄 Implementation complete. Awaiting acceptance audit.
 
 ---
 

@@ -1020,3 +1020,111 @@ layer isolation; quality module system-clock purity.
 **Rationale:** Consistent with the per-phase test gate established across Phases 2–8B.
 Each new module, integration path, and boundary extension must have dedicated tests
 before acceptance.
+
+---
+
+## D-087 — Phase 8D boundary: API Contract Documentation + API Error Taxonomy, Tier 2 only
+
+**Date:** 2026-06-23 (Phase 8D)
+**Decision:** Phase 8D implements API contract documentation only, within Tier 2.
+Specifically: `docs/API_CONTRACT.md` documenting the JSON response shape for
+`GET /health`, `GET /reports/daily`, and `GET /reports/weekly`, including all Phase 7B
+base fields, all Phase 8A `data_quality` and `ticker_quality` fields, all Phase 8C
+gap diagnostic fields, and an API error taxonomy covering all current HTTP 422 failure
+modes per route. Example JSON payloads for four representative scenarios are included.
+No new API routes. No application code changed. No new dependencies. No optional
+contract tests in Phase 8D (deferred; see D-090).
+**Options considered:** Candidate B (CSV import diagnostics — deferred), Candidate C
+(local data flow documentation — deferred as follow-on after D-087 is accepted),
+Candidate D (API error taxonomy — adopted as documentation companion within this same
+artefact rather than a separate phase).
+**Rationale:** Candidate A was explicitly deferred from both Phase 8B and Phase 8C
+pending response shape stabilisation. Phase 8C acceptance closes that deferral: all
+planned Phase 8 analytical fields are now accepted and the response shape is stable.
+Documenting the shape now locks it in before any future phase adds more fields.
+Documentation-only variant has zero implementation risk. Candidate D's error taxonomy
+is bundled into the same artefact as planned in the Phase 8D candidate planning document.
+
+---
+
+## D-088 — Phase 8D documentation scope: all Phase 7B–8C response fields covered
+
+**Date:** 2026-06-23 (Phase 8D)
+**Decision:** `docs/API_CONTRACT.md` covers all three routes. For the report routes
+it documents all top-level keys (`report_date`, `report_type`, `sections`,
+`journal_entries`, `data_quality`; plus `week_start` for the weekly route); all
+`DataQualitySummary` fields; all `TickerQuality` fields including all four Phase 8C gap
+fields (`local_price_date_count_on_or_before_report_date`, `largest_price_date_gap_days`,
+`largest_price_date_gap_start`, `largest_price_date_gap_end`); `ReportSection` fields
+(`label`, `body`); and all `JournalEntry` fields. Each field entry states its key name,
+JSON type, nullable status, and the phase that introduced it. The document does not
+describe planned or future fields.
+**Rationale:** Complete field coverage makes the document authoritative for any future
+consumer. Partial coverage would require revision whenever an undocumented field is
+encountered. Scoping strictly to accepted fields keeps the document accurate.
+
+---
+
+## D-089 — Phase 8D example payloads: four representative scenarios
+
+**Date:** 2026-06-23 (Phase 8D)
+**Decision:** `docs/API_CONTRACT.md` includes four representative JSON response examples:
+Scenario A — `GET /health` success; Scenario B — daily report with complete price support
+and no "Data Quality Caveat" section; Scenario C — daily report with incomplete price
+support, "Data Quality Caveat" present, and gap fields populated (including a `null`-gap
+ticker with zero price records); Scenario D — weekly report with one journal entry,
+`data_quality` present, and gap fields populated. All examples use neutral ticker names
+(`"AAAA"`, `"BBBB"`). No advisory, directional, or trading language is used. Journal
+entry text in Scenario D is explicitly marked as sample text; user-authored content is
+not rewritten or compliance-scanned.
+**Rationale:** Concrete examples make abstract field descriptions unambiguous. The four
+scenarios cover the conditional branches in the system (priced/unpriced, alert
+fired/not-fired, journal present/absent) so a consumer can reason about which fields are
+always present and which are conditional.
+
+---
+
+## D-090 — Phase 8D optional contract tests: deferred from Phase 8D
+
+**Date:** 2026-06-23 (Phase 8D)
+**Decision:** The optional structural integration tests described in
+`docs/PHASE8D_CANDIDATE_PLAN.md` §3 (Candidate A, optional API contract tests) and
+proposed in Phase 8D planning are **deferred** from Phase 8D implementation. Phase 8D
+is documentation-only. The optional test set (parametrised assertions for top-level key
+presence, `ticker_quality` gap fields, and error status codes / body structure) may be
+adopted in a future phase when a consumer is actively being built against the documented
+contract. The decision to defer does not remove the option; it requires a separate
+explicit approval at that time.
+**Rationale:** The implementation instructions for Phase 8D state "Do not add tests
+unless strictly needed for documentation consistency." The documentation artefact is
+self-contained and accurate without accompanying contract tests. Deferring keeps Phase
+8D scope minimal and eliminates any risk of introducing test infrastructure changes
+without a dedicated review.
+
+---
+
+## D-091 — Phase 8D architecture invariant: unchanged
+
+**Date:** 2026-06-23 (Phase 8D)
+**Decision:** Phase 8D introduces no new application modules and no new inter-layer
+dependencies. The architecture invariant test count remains at 12 (3 original + 3
+Phase 8A + 2 Phase 8B + 4 Phase 8C). No new invariant tests are added in Phase 8D.
+No test files are created or modified.
+**Rationale:** Phase 8D adds only documentation. No new import patterns or module-level
+rules are introduced. Extending the invariant count without a corresponding new rule
+would create false coverage. Consistent with D-091 as proposed in
+`docs/PHASE8D_CANDIDATE_PLAN.md`.
+
+---
+
+## D-092 — Phase 8D test gate: 701 tests passed, 0 skipped (unchanged)
+
+**Date:** 2026-06-23 (Phase 8D)
+**Decision:** Phase 8D implementation is accepted when `python -m pytest backend/tests/`
+returns 701 passed, 0 skipped — the same count as Phase 8C. No new tests are added in
+Phase 8D (D-090 deferred; D-091 unchanged). The test count is unchanged because the
+entire Phase 8D scope is a documentation artefact. Architecture invariant total remains
+at 12 tests.
+**Rationale:** Consistent with the per-phase test gate established across Phases 2–8C.
+A documentation-only phase with no application code changes requires no new tests and
+must not reduce the existing test count.
