@@ -567,3 +567,128 @@ automatic.
 **Rationale:** The API layer is the surface through which the frontend will consume
 reports; shipping v0.1 without any API surface would leave the product unusable. Phase 7B
 must be completed before v0.1 can be declared done.
+
+---
+
+## D-058 — Phase 7B API boundary
+
+**Date:** 2026-06-23 (Phase 7B)
+**Decision:** Phase 7B implements read-only report routes only:
+  GET /health, GET /reports/daily, GET /reports/weekly.
+No write routes, no execution endpoints, no broker access, no scheduled jobs,
+no notifications, no external HTTP calls from application code.
+**Rationale:** Consistent with the automation ceiling defined in RISK_POLICY.md §7
+(read → compute → notify). All routes are GET-only. The API describes computed facts;
+it never prescribes action.
+
+---
+
+## D-059 — FastAPI dependency declaration
+
+**Date:** 2026-06-23 (Phase 7B)
+**Decision:** Add `fastapi>=0.100.0` as the only new runtime dependency in Phase 7B.
+Add `httpx2` under `[project.optional-dependencies] dev` for TestClient support.
+Do not add uvicorn as a project dependency — users install it manually to run the server.
+Do not add requests, aiohttp, or any external HTTP client as a runtime dependency.
+**Options considered:** `fastapi[standard]` which bundles uvicorn (rejected — keeps
+dependencies minimal; uvicorn is a runtime concern, not a test concern).
+**Rationale:** D-013 already decided FastAPI as the framework. Phase 7B is the
+implementation point. httpx2 is required by starlette 1.2.1+ for TestClient.
+
+---
+
+## D-060 — API date parameters
+
+**Date:** 2026-06-23 (Phase 7B)
+**Decision:** `report_date` and `week_start` are required, caller-provided ISO-8601
+date strings. No optional date with system-clock fallback. Invalid dates return
+HTTP 422 with a structured error body: {error, field, value, message}.
+**Rationale:** Consistent with D-056 (report builder date policy) and D-031 (metrics
+engine valuation date). System-clock independence makes the API deterministic and testable.
+
+---
+
+## D-061 — API DB path and connection lifecycle
+
+**Date:** 2026-06-23 (Phase 7B)
+**Decision:** Use existing D-023 policy: OTOMASYON_DB_PATH env var, default
+`./data/otomasyon.db`. One connection opened per request via `deps.get_conn()`.
+`init_schema(conn)` called per request (idempotent). Connection closed via try/finally.
+No global persistent connection. No connection pool. `check_same_thread=False` set on
+all connections to allow sync handlers to run in FastAPI's thread pool.
+**Rationale:** Per-request connection keeps the lifecycle simple for a local single-user
+tool. `check_same_thread=False` is safe because each connection is owned by exactly one
+request at a time; it also makes test injection across threads possible.
+
+---
+
+## D-062 — API orchestration sequence
+
+**Date:** 2026-06-23 (Phase 7B)
+**Decision:** Route handlers follow this sequence:
+  1. Validate date parameters → HTTP 422 on failure.
+  2. Open connection via `deps.get_conn()` (init_schema already called).
+  3. `adapter = SQLiteDataAdapter(conn)`.
+  4. `holdings = adapter.get_holdings()`.
+  5. `prices = adapter.get_prices()`.
+  6. `journal_entries = adapter.get_journal_entries(date_from, date_to)`.
+  7. `snapshot = compute_portfolio_snapshot(holdings, prices)`.
+  8. `drawdown = compute_drawdown(holdings, prices)`.
+  9. `volatility = compute_volatility_proxy(holdings, prices)`.
+  10. `alert_results = evaluate_alerts(snapshot, drawdown, volatility, AlertConfig())`.
+  11. `report = build_daily_report(...)` or `build_weekly_report(...)`.
+  12. `return dataclasses.asdict(report)`.
+Note: drawdown and volatility are computed for daily routes even though
+build_daily_report does not consume them — evaluate_alerts requires them for DD-001/VOL-001.
+**Rationale:** Complete alert evaluation is required by D-038 and D-055.
+
+---
+
+## D-063 — API serialization policy
+
+**Date:** 2026-06-23 (Phase 7B)
+**Decision:** Use `dataclasses.asdict(report)` to convert frozen report dataclasses
+to plain JSON-serializable dicts. No Pydantic response model in v0.1. FastAPI serializes
+the returned dict to JSON. Journal text in journal_entries fields is carried verbatim
+through asdict() without rewriting or compliance scanning. No new text is injected.
+**Rationale:** dataclasses.asdict() handles nested frozen dataclasses recursively.
+All field types (str, int, list, None) are JSON-serializable. Consistent with D-053.
+
+---
+
+## D-064 — Alert inclusion in API response
+
+**Date:** 2026-06-23 (Phase 7B)
+**Decision:** The API response matches the report builder output exactly. All evaluated
+alerts (fired and non-fired) are embedded in the Alert Summary section text. No separate
+top-level alerts array is added to the response.
+**Rationale:** Consistent with D-055 (alert inclusion in reports) and D-038 (all results
+returned). The report builder already formats alert text; the API does not duplicate it.
+
+---
+
+## D-065 — v0.1 completion criteria
+
+**Date:** 2026-06-23 (Phase 7B)
+**Decision:** v0.1 is complete only after Phase 7B implementation, acceptance audit,
+all tests green, architecture invariant green, and all docs updated with no forbidden
+scope introduced. After Phase 7B acceptance: Phase 8 begins with the Tier 3 gate review
+(paper trading research boundary) — a conscious, deliberate decision requiring its own
+DECISIONS.md entry and explicit human approval before any code is written.
+**Rationale:** Consistent with D-057. v0.1 implementation is now done; acceptance audit
+determines whether v0.1 is officially closed.
+
+---
+
+## D-066 — DataAdapter journal extension
+
+**Date:** 2026-06-23 (Phase 7B)
+**Decision:** DataAdapter ABC gains `get_journal_entries(date_from: str, date_to: str)
+-> list[JournalEntry]` as an abstract method. SQLiteDataAdapter implements it by
+delegating to `JournalRepo.get_by_date_range(date_from, date_to)`. JournalRepo gains
+`get_by_date_range()` which validates both dates and returns entries ordered by
+entry_date DESC, created_at DESC. API routes use only `SQLiteDataAdapter` for all data
+access — no direct persistence repo imports in route modules.
+**Rationale:** Maintains the "all data through adapters" invariant from ARCHITECTURE.md.
+Avoids direct persistence repo imports from api/routes/, consistent with the approved
+Phase 7B implementation constraints.

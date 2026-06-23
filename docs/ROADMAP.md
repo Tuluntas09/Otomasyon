@@ -12,7 +12,7 @@
 | 5 | Alerts + compliance guard | ✅ complete — awaiting human review |
 | 6 | Decision journal | ✅ complete — awaiting human review |
 | 7A | Reports — pure builder | ✅ complete — awaiting human review |
-| 7B | API layer — FastAPI routes | ⛔ not started — requires separate approval |
+| 7B | API layer — FastAPI routes | ✅ complete — awaiting acceptance audit |
 | 8 | Tier 3 gate review (paper trading research boundary) | ⛔ not started |
 
 ---
@@ -209,9 +209,32 @@ Journal entries carried verbatim without compliance scanning.
 ## Phase 7B — API layer: FastAPI routes
 
 **Scope:** Wire minimal read-only FastAPI routes for frontend consumption of reports.
-Requires separate human approval before implementation.
 
-**Status:** ⛔ Not started — requires separate approval.
+**Key deliverables:**
+- `backend/app/api/app.py` — FastAPI app instance.
+- `backend/app/api/routes/health.py` — `GET /health`.
+- `backend/app/api/routes/reports.py` — `GET /reports/daily`, `GET /reports/weekly`.
+- `backend/app/api/deps.py` — per-request DB connection dependency.
+- `backend/main.py` — ASGI entry point.
+- `backend/app/data/adapters/base.py` — `DataAdapter` extended with `get_journal_entries`.
+- `backend/app/data/adapters/sqlite_adapter.py` — `get_journal_entries` implemented.
+- `backend/app/data/persistence/journal_repo.py` — `get_by_date_range` added.
+- `backend/tests/integration/test_api_reports.py` — 49 integration tests.
+- `docs/DECISIONS.md` updated with D-058 through D-066.
+
+**Acceptance criteria:**
+- Architecture invariant still passes.
+- All routes are GET-only. No write endpoints.
+- `GET /reports/daily?report_date=YYYY-MM-DD` returns a serialized DailyReport.
+- `GET /reports/weekly?week_start=YYYY-MM-DD&report_date=YYYY-MM-DD` returns a serialized WeeklyReport.
+- Invalid date parameters return HTTP 422 with structured error detail.
+- Journal entries returned verbatim; compliance guard not applied to user-authored text.
+- System-generated sections contain no forbidden language.
+- API routes import no persistence repos directly.
+- pyproject.toml has `fastapi>=0.100.0` runtime dependency and dev optional dependency.
+- Total test count > 451. Zero skipped.
+
+**Status:** ✅ Complete — awaiting human acceptance audit before v0.1 is declared done.
 
 ---
 

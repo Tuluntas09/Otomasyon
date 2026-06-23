@@ -85,9 +85,13 @@ fails the build if any violation is found.
 |---|---|---|
 | `metrics/` | Arguments passed in | DB, filesystem, network |
 | `alerts/` | `metrics/` output, `data/adapters/` | DB directly, `persistence/` |
-| `api/` | `data/adapters/`, `metrics/`, `alerts/`, `reports/` | `persistence/` directly |
-| `reports/` | `data/adapters/`, `metrics/`, `alerts/` | DB directly |
-| `journal/` | `data/adapters/` | `metrics/` (journal is independent) |
+| `api/routes/` | `data/adapters/`, `metrics/`, `alerts/`, `reports/` | `persistence/` directly (D-066) |
+| `api/deps.py` | `data/persistence/db` (connection/schema only) | Business logic modules |
+| `reports/` | Arguments passed in (pure builder, D-052) | DB, filesystem, network, adapters |
+| `journal/` | Arguments passed in (domain model only) | `metrics/`, `data/` |
+
+**Note (D-066):** `api/routes/` accesses journal entries through `SQLiteDataAdapter.get_journal_entries()`,
+which delegates to `JournalRepo` internally. Route modules never import persistence repos directly.
 
 ---
 

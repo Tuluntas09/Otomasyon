@@ -7,7 +7,8 @@ No update or delete methods.
 import sqlite3
 from datetime import datetime, timezone
 
-from app.core.validation import validate_ticker
+from app.core.exceptions import InvalidDateError
+from app.core.validation import validate_iso_date, validate_ticker
 from app.journal.models import JournalEntry, validate_new_entry
 
 
@@ -69,6 +70,30 @@ class JournalRepo:
             FROM journal_entries
             ORDER BY entry_date DESC, created_at DESC
             """
+        ).fetchall()
+        return [_row_to_entry(row) for row in rows]
+
+    def get_by_date_range(self, date_from: str, date_to: str) -> list[JournalEntry]:
+        """Return entries with entry_date in [date_from, date_to], newest first.
+
+        Both dates must be valid ISO-8601 strings. date_from must be <= date_to.
+        Returns [] if none match. User-authored text is never rewritten or scanned.
+        """
+        validate_iso_date(date_from)
+        validate_iso_date(date_to)
+        if date_from > date_to:
+            raise InvalidDateError(
+                f"date_from {date_from!r} must be on or before date_to {date_to!r}."
+            )
+        rows = self._conn.execute(
+            """
+            SELECT id, entry_date, ticker, action_taken, reasoning,
+                   hypothesis, review_date, tags, created_at
+            FROM journal_entries
+            WHERE entry_date >= ? AND entry_date <= ?
+            ORDER BY entry_date DESC, created_at DESC
+            """,
+            (date_from, date_to),
         ).fetchall()
         return [_row_to_entry(row) for row in rows]
 

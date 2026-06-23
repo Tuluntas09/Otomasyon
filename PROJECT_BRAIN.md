@@ -126,7 +126,17 @@ Full detail: `docs/MVP_SCOPE.md`.
   must be ≤ `report_date`; invalid dates raise `InvalidDateError`. `451 passed, 0 skipped`
   — architecture invariant green. Decisions D-051 through D-057 recorded.
 
-**Next gate:** human review before Phase 7B begins. v0.1 is NOT complete until Phase 7B is accepted.
+- **Phase 7B (API layer):** ✅ **implementation complete — awaiting acceptance audit.**
+  Minimal read-only FastAPI routes implemented under `backend/app/api/`. Three routes:
+  `GET /health`, `GET /reports/daily`, `GET /reports/weekly`. Per-request SQLite connection
+  via `deps.get_conn()` using D-023 path policy. Full orchestration: SQLiteDataAdapter →
+  metrics → alerts → report builder → `dataclasses.asdict()` → JSON. `DataAdapter` ABC
+  extended with `get_journal_entries(date_from, date_to)`; `SQLiteDataAdapter` delegates
+  to `JournalRepo.get_by_date_range()` (D-066). No persistence repo imports in route
+  modules. `500 passed, 0 skipped` — architecture invariant green.
+  Decisions D-058 through D-066 recorded.
+
+**Next gate:** Phase 7B acceptance audit. v0.1 is NOT declared done until audit is complete.
 
 ---
 
@@ -179,6 +189,15 @@ The authoritative log is `docs/DECISIONS.md`. Key locks:
 - **D-055** Alert inclusion: all evaluated alerts (fired and non-fired) in every report.
 - **D-056** Report date policy: `report_date` and `week_start` caller-provided; no system clock.
 - **D-057** v0.1 closeout: complete only after Phase 7B acceptance; Phase 8 = Tier 3 gate review.
+- **D-058** Phase 7B API boundary: read-only routes only; no write endpoints, no broker access.
+- **D-059** FastAPI dependency: `fastapi>=0.100.0` runtime; `httpx2` dev optional; no uvicorn.
+- **D-060** API date params: `report_date` and `week_start` are required caller-provided ISO dates.
+- **D-061** API DB path: D-023 policy; per-request connection; `check_same_thread=False`.
+- **D-062** API orchestration: connection → DataAdapter → metrics → alerts → builder → asdict → JSON.
+- **D-063** Serialization: `dataclasses.asdict()`; no Pydantic model; journal text verbatim.
+- **D-064** Alert inclusion in API: embedded in report sections; no separate top-level alerts array.
+- **D-065** v0.1 completion: Phase 7B accepted + all tests green + docs updated + no forbidden scope.
+- **D-066** DataAdapter journal extension: `get_journal_entries(date_from, date_to)` on ABC and adapter.
 
 Any change to these requires a new dated entry in `DECISIONS.md` (append-only in spirit).
 
@@ -280,6 +299,6 @@ honest. If it ever drifts from reality, fix it before doing anything else.*
 - Phase 4 complete
 - Phase 5 complete
 - Phase 6 complete
-- Phase 7A complete (pure report builder) — awaiting human review
-- Phase 7B not started — requires separate approval
-- v0.1 not complete until Phase 7B accepted
+- Phase 7A complete (pure report builder)
+- Phase 7B implementation complete — awaiting acceptance audit
+- v0.1 implementation done — NOT declared complete until Phase 7B acceptance audit passes
