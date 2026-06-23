@@ -299,7 +299,7 @@ The response is produced by `dataclasses.asdict(WeeklyReport(...))`.
 | 14 | `"Method Note"` | Always | Statement that metrics are computed from supplied data. |
 | 15 | `"Disclaimer"` | Always | Standard disclaimer statement. |
 
-**Section count:** 13 (all priced, with data_quality) or 14 (any unpriced, with data_quality).
+**Section count:** 14 (all priced, with data_quality) or 15 (any unpriced, with data_quality).
 
 #### Error responses
 

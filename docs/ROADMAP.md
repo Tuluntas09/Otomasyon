@@ -17,7 +17,7 @@
 | 8A | Data quality analytics (Option B implementation) | ✅ accepted |
 | 8B | Report explainability + architecture hardening (Option B, Tier 2) | ✅ accepted |
 | 8C | Local price-date gap diagnostics + repository hardening (Option B, Tier 2) | ✅ accepted |
-| 8D | API Contract Documentation + API Error Taxonomy (Option B, Tier 2) | 🔄 implementation complete — awaiting acceptance audit |
+| 8D | API Contract Documentation + API Error Taxonomy (Option B, Tier 2) | ✅ accepted |
 
 ---
 
@@ -377,7 +377,7 @@ No new API routes, no new persistence tables, no new dependencies.
 - Total test count unchanged: 701 passed, 0 skipped (D-092).
 - Phase 8E not started.
 
-**Status:** 🔄 Implementation complete. Awaiting acceptance audit.
+**Status:** ✅ Accepted.
 
 ---
 

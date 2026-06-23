@@ -174,18 +174,17 @@ Full detail: `docs/MVP_SCOPE.md`.
   no new persistence tables, no new runtime dependencies introduced.
 
 - **Phase 8D (API contract documentation + API error taxonomy — Option B, Tier 2):**
-  🔄 **implementation complete — awaiting acceptance audit.**
-  `docs/API_CONTRACT.md` created, documenting the full JSON response shape for all
-  three read-only routes (`GET /health`, `GET /reports/daily`, `GET /reports/weekly`),
-  including all Phase 7B–8C fields, four representative example payloads, and a
-  complete API error taxonomy covering all HTTP 422 failure modes with both the
-  custom error shape (`detail` as dict) and the FastAPI-generated shape (`detail` as
-  list). Boundary and safety notes section added. No application code changed.
-  No new routes. No new dependencies. `701 passed, 0 skipped` — all invariants green.
-  Decisions D-087 through D-092 recorded. Phase 8D is not yet marked accepted.
-  Phase 8E has not started.
+  ✅ **accepted.** `docs/API_CONTRACT.md` created, documenting the full JSON response
+  shape for all three read-only routes (`GET /health`, `GET /reports/daily`,
+  `GET /reports/weekly`), including all Phase 7B–8C fields, four representative example
+  payloads, and a complete API error taxonomy covering all HTTP 422 failure modes with
+  both the custom error shape (`detail` as dict) and the FastAPI-generated shape
+  (`detail` as list). Boundary and safety notes section added. One documentation
+  inaccuracy (weekly section count 13→14, 14→15) corrected during acceptance audit.
+  No application code changed. No new routes. No new dependencies. `701 passed,
+  0 skipped` — all invariants green. Decisions D-087 through D-092 recorded.
 
-**v0.1 implementation accepted. Phase 8A, 8B, 8C accepted. Phase 8D awaiting acceptance audit.**
+**v0.1 implementation accepted. Phase 8A, 8B, 8C, 8D accepted.**
 Phase 8 further work requires its own dated DECISIONS.md entry and explicit
 human approval before any code is written.
 
@@ -377,5 +376,5 @@ honest. If it ever drifts from reality, fix it before doing anything else.*
 - Phase 8A accepted (data quality analytics — Option B, Tier 2)
 - Phase 8B accepted (report explainability + architecture hardening)
 - Phase 8C accepted (local price-date gap diagnostics + repository hardening)
-- Phase 8D implementation complete — awaiting acceptance audit (API contract documentation + error taxonomy)
+- Phase 8D accepted (API contract documentation + API error taxonomy)
 - Phase 8E has not started; requires deliberate human approval
