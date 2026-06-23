@@ -291,3 +291,101 @@ raise for insufficient data.
 **Rationale:** Deferring M-005 and M-006 to a later phase would leave the alert engine
 (Phase 5) without the drawdown and volatility inputs it needs. All six metrics are
 defined in `METRICS_SPEC.md` for v0.1; implementing them together is the right gate.
+
+---
+
+## D-036 — Alert engine boundary
+
+**Date:** 2026-06-23 (Phase 5)
+**Decision:** The alert engine (`backend/app/alerts/`) receives already-computed metric
+result objects (`PortfolioSnapshot`, `DrawdownResult | None`, `VolatilityResult | None`)
+and an `AlertConfig`. It does not call Phase 4 metric functions, does not access the
+database, and performs no file or network I/O. It returns a list of `AlertResult` objects.
+**Rationale:** Keeping the alert engine as a pure consumer of metric results (not a
+producer) preserves the same purity invariant that governs the metrics engine. It also
+makes alert evaluation trivially testable without any database fixtures.
+
+---
+
+## D-037 — AlertConfig: caller-provided thresholds with conservative defaults
+
+**Date:** 2026-06-23 (Phase 5)
+**Decision:** Alert thresholds are expressed as a frozen `AlertConfig` dataclass supplied
+by the caller. Conservative defaults: concentration 0.25, drawdown 0.15, volatility 0.02,
+max_unpriced_holdings 0.
+**Rationale:** Frozen dataclasses prevent accidental mutation. Caller-supplied config
+decouples threshold policy from engine logic. Conservative defaults ensure the engine
+is safe out of the box.
+
+---
+
+## D-038 — AlertResult schema: all evaluations returned, not only fired ones
+
+**Date:** 2026-06-23 (Phase 5)
+**Decision:** `AlertResult` is a frozen dataclass with fields: `rule_id`, `fired`,
+`severity`, `metric_value`, `threshold`, `explanation`, `ticker`. `evaluate_alerts`
+returns a result for every evaluated rule, not only the ones that fired.
+**Rationale:** Returning all results (including non-firing ones) lets callers display
+a complete picture — showing that a rule was evaluated and did not fire is informative
+in itself. It avoids silent absence where a missing result is ambiguous.
+
+---
+
+## D-039 — Compliance guard behavior: raise with all violations, never rewrite
+
+**Date:** 2026-06-23 (Phase 5)
+**Decision:** `check_compliance(text)` passes silently for compliant or empty text.
+If any forbidden term is found it raises `ComplianceViolationError` listing every matched
+term. It never rewrites, sanitizes, or truncates the input text.
+**Rationale:** Silently sanitizing text would allow non-compliant strings to reach the
+user in a modified form without the developer being alerted. Hard failure forces the
+caller to supply compliant text from the outset.
+
+---
+
+## D-040 — Compliance as a hard chokepoint inside evaluate_alerts
+
+**Date:** 2026-06-23 (Phase 5)
+**Decision:** Every alert explanation is passed through `check_compliance()` inside
+`evaluate_alerts`, before the `AlertResult` is constructed. If `check_compliance` raises,
+the error propagates to the caller.
+**Rationale:** This makes compliance non-optional — no `AlertResult` can exist with an
+explanation that has not been checked. It is consistent with `ARCHITECTURE.md` §4:
+"Compliance is a chokepoint."
+
+---
+
+## D-041 — Severity labels: informational, watch, elevated only
+
+**Date:** 2026-06-23 (Phase 5)
+**Decision:** Alert severity uses exactly three labels: `"informational"` (not fired),
+`"watch"` (fired, value ≤ 2× threshold), `"elevated"` (fired, value > 2× threshold).
+Labels `"urgent"`, `"critical"`, and any action-oriented label are prohibited.
+**Rationale:** Action-oriented severity labels (urgent, critical) imply the user must act.
+This violates the policy that alerts describe facts, not prescribe action.
+
+---
+
+## D-042 — Compliance matching: whole-word for single terms, bounded phrase for multi-word
+
+**Date:** 2026-06-23 (Phase 5)
+**Decision:** Single-word forbidden terms use `\b<term>\b` (whole-word, case-insensitive,
+Unicode). Multi-word phrases use `\b<phrase>\b` with word boundaries only at the start and
+end of the phrase. Explicit false-positive verifications: "threshold" does not trigger
+"hold"; "glossy" does not trigger "loss"; "total" and "capital" do not trigger Turkish "al"
+— all confirmed by `\b` semantics (the preceding character is a word character, so no
+boundary exists before the substring).
+**Rationale:** Whole-word matching prevents substring false positives. Unicode flag
+ensures Turkish characters (ı, ş, ç, ğ, ö, ü, etc.) are treated as word characters.
+
+---
+
+## D-043 — Alert threshold equality: strict greater-than only
+
+**Date:** 2026-06-23 (Phase 5)
+**Decision:** All alert rule comparisons use strict greater-than (`>`). A metric value
+exactly equal to the threshold does NOT fire the alert. This applies to all four rules:
+CONC-001, DD-001, VOL-001, and COV-001.
+**Rationale:** Alert wording uses "above", "exceeds", and "ceiling breach" semantics.
+Firing at exact equality would contradict "above the ceiling of X%" when the value IS X%.
+Strict greater-than is also consistent with standard threshold-alarm conventions.

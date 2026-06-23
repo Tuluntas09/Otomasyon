@@ -52,3 +52,16 @@ class CsvImportError(OtomasyonError):
         self.errors = errors
         n = len(errors)
         super().__init__(f"{n} row{'s' if n != 1 else ''} failed validation during CSV import.")
+
+
+class ComplianceViolationError(OtomasyonError):
+    """Generated text contains one or more forbidden terms.
+
+    Attributes:
+        violations: list of ComplianceViolation (from compliance.guard).
+    """
+
+    def __init__(self, violations: list) -> None:
+        self.violations = violations
+        terms = ", ".join(v.matched_term for v in violations)
+        super().__init__(f"Compliance violation(s) detected: {terms}")

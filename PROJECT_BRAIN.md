@@ -101,9 +101,16 @@ Full detail: `docs/MVP_SCOPE.md`.
   use latest input price date (not system date). Coverage ratios reported. No forbidden
   imports. `222 passed, 0 skipped` — architecture invariant green.
   Decisions D-030 through D-035 recorded.
-- **Phase 5 (alerts + compliance guard):** ⛔ **not started.**
+- **Phase 5 (alerts + compliance guard):** ✅ **complete.** Compliance guard
+  (`check_compliance`, `ComplianceViolation`, `ComplianceViolationError`) implemented
+  under `backend/app/compliance/`. Alert engine (`evaluate_alerts`, `AlertConfig`,
+  `AlertResult`) implemented under `backend/app/alerts/`. Four rules: CONC-001, DD-001,
+  VOL-001, COV-001. Strict greater-than threshold comparison throughout. Every explanation
+  passes compliance before `AlertResult` construction. `313 passed, 0 skipped` —
+  architecture invariant green. Decisions D-036 through D-043 recorded.
+- **Phase 6 (decision journal):** ⛔ **not started.**
 
-**Next gate:** human review before any Phase 5 work begins.
+**Next gate:** human review before Phase 6 begins.
 
 ---
 
@@ -134,6 +141,14 @@ The authoritative log is `docs/DECISIONS.md`. Key locks:
 - **D-033** Numeric precision: Python float; no Decimal; no engine-side rounding.
 - **D-034** M-006 return basis: daily percentage returns; `statistics.pstdev`; not annualised.
 - **D-035** Phase 4 scope: all six metrics M-001 through M-006, including time-series M-005 and M-006.
+- **D-036** Alert engine boundary: receives metric result objects, no I/O, returns AlertResult list.
+- **D-037** AlertConfig: frozen, caller-provided thresholds; conservative defaults.
+- **D-038** AlertResult schema: frozen dataclass; evaluate_alerts returns all results, not only fired.
+- **D-039** Compliance guard: raises ComplianceViolationError with all violations; never rewrites text.
+- **D-040** Compliance chokepoint: every explanation passes check_compliance inside evaluate_alerts.
+- **D-041** Severity labels: informational, watch, elevated only. No urgent/critical.
+- **D-042** Compliance matching: whole-word \b for single terms, bounded phrase for multi-word; false-positive protections verified.
+- **D-043** Alert threshold equality: strict greater-than only; exact equality does not fire.
 
 Any change to these requires a new dated entry in `DECISIONS.md` (append-only in spirit).
 
@@ -223,3 +238,15 @@ per-phase criteria live in `ROADMAP.md`.
 
 *This file is the brain: identity, rules, status, and the map. Keep it short, current, and
 honest. If it ever drifts from reality, fix it before doing anything else.*
+
+---
+
+## Phase completion summary
+
+- Phase 0 complete
+- Phase 1 complete
+- Phase 2 complete
+- Phase 3 complete
+- Phase 4 complete
+- Phase 5 complete
+- Phase 6 not started

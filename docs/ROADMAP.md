@@ -9,7 +9,7 @@
 | 2 | Data model + local storage | ✅ complete — awaiting human review |
 | 3 | CSV data adapter | ✅ complete — awaiting human review |
 | 4 | Metrics engine | ✅ complete — awaiting human review |
-| 5 | Alerts + compliance guard | ⛔ not started |
+| 5 | Alerts + compliance guard | ✅ complete — awaiting human review |
 | 6 | Decision journal | ⛔ not started |
 | 7 | Reports + API layer | ⛔ not started |
 | 8 | Tier 3 gate review (paper trading research boundary) | ⛔ not started |
@@ -128,7 +128,24 @@ writes them to the database via the repository layer. Implement the concrete
 **Scope:** Implement alert rule evaluation and the compliance guard. All system-generated
 text routed through the guard from this phase onward.
 
-**Status:** ⛔ Not started.
+**Key deliverables:**
+- `backend/app/compliance/guard.py` — `ComplianceViolation` dataclass, `check_compliance()`.
+- `backend/app/alerts/results.py` — `AlertConfig`, `AlertResult` frozen dataclasses.
+- `backend/app/alerts/rules.py` — `evaluate_alerts()` consuming Phase 4 metric results.
+- `backend/app/core/exceptions.py` — `ComplianceViolationError` added.
+- `backend/tests/unit/test_compliance.py` — compliance guard unit tests.
+- `backend/tests/unit/test_alerts.py` — alert engine unit and boundary tests.
+- `DECISIONS.md` updated with D-036 through D-043.
+
+**Acceptance criteria:**
+- All four alert rules (CONC-001, DD-001, VOL-001, COV-001) implemented.
+- Strict greater-than threshold comparison — exact equality does not fire.
+- Every alert explanation passes check_compliance before AlertResult construction.
+- Alert engine imports no forbidden modules (sqlite3, csv, os, pathlib, network, persistence, adapters).
+- Architecture invariant still passes.
+- pyproject.toml dependencies unchanged.
+
+**Status:** ✅ Complete. Awaiting human review before Phase 6 begins.
 
 ---
 
