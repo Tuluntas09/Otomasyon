@@ -159,7 +159,7 @@ Full detail: `docs/MVP_SCOPE.md`.
   green. Decisions D-075 through D-080 recorded.
 
 - **Phase 8C (local price-date gap diagnostics + repository hardening — Option B, Tier 2):**
-  🔄 **complete — awaiting acceptance audit.** Pure helper `_compute_largest_gap` and four
+  ✅ **accepted.** Pure helper `_compute_largest_gap` and four
   new fields added to `TickerQuality` in `backend/app/metrics/quality.py`:
   `local_price_date_count_on_or_before_report_date`, `largest_price_date_gap_days`,
   `largest_price_date_gap_start`, `largest_price_date_gap_end`. "Data Quality Summary"
@@ -173,7 +173,7 @@ Full detail: `docs/MVP_SCOPE.md`.
   backtesting, no external market data, no scheduler, no notifications, no new API routes,
   no new persistence tables, no new runtime dependencies introduced.
 
-**v0.1 implementation accepted. Phase 8A, 8B accepted. Phase 8C complete — awaiting acceptance audit.**
+**v0.1 implementation accepted. Phase 8A, 8B, 8C accepted.**
 Phase 8 further work requires its own dated DECISIONS.md entry and explicit
 human approval before any code is written.
 
@@ -357,5 +357,5 @@ honest. If it ever drifts from reality, fix it before doing anything else.*
 - Phase 8 gate plan created; Option B (Tier 2 analytics) selected
 - Phase 8A accepted (data quality analytics — Option B, Tier 2)
 - Phase 8B accepted (report explainability + architecture hardening)
-- Phase 8C complete — awaiting acceptance audit (local price-date gap diagnostics + repository hardening)
+- Phase 8C accepted (local price-date gap diagnostics + repository hardening)
 - Further Phase 8 work requires deliberate human approval

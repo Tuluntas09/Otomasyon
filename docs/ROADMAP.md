@@ -16,7 +16,7 @@
 | 8 | Phase 8 gate review (Option B selected — Tier 2 analytics) | ✅ gate accepted |
 | 8A | Data quality analytics (Option B implementation) | ✅ accepted |
 | 8B | Report explainability + architecture hardening (Option B, Tier 2) | ✅ accepted |
-| 8C | Local price-date gap diagnostics + repository hardening (Option B, Tier 2) | 🔄 complete — awaiting acceptance audit |
+| 8C | Local price-date gap diagnostics + repository hardening (Option B, Tier 2) | ✅ accepted |
 
 ---
 
@@ -349,7 +349,7 @@ no new runtime dependencies.
 - Architecture invariant extended: 12 tests total (3 + 3 + 2 + 4).
 - Total test count: 701 passed, 0 skipped.
 
-**Status:** 🔄 Complete — awaiting acceptance audit.
+**Status:** ✅ Accepted.
 
 ---
 
