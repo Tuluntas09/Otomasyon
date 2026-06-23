@@ -95,9 +95,15 @@ Full detail: `docs/MVP_SCOPE.md`.
   All-or-nothing for holdings/watchlist with DB duplicate pre-check. Row-level error
   collection for prices. `178 passed, 0 skipped` — architecture invariant green.
   Decisions D-024 through D-029 recorded.
-- **Phase 4 (metrics engine):** ⛔ **not started.**
+- **Phase 4 (metrics engine):** ✅ **complete.** Pure metrics engine implemented under
+  `backend/app/metrics/`. `compute_portfolio_snapshot` (M-001 through M-004),
+  `compute_drawdown` (M-005), `compute_volatility_proxy` (M-006). All window calculations
+  use latest input price date (not system date). Coverage ratios reported. No forbidden
+  imports. `222 passed, 0 skipped` — architecture invariant green.
+  Decisions D-030 through D-035 recorded.
+- **Phase 5 (alerts + compliance guard):** ⛔ **not started.**
 
-**Next gate:** human review before any Phase 4 work begins.
+**Next gate:** human review before any Phase 5 work begins.
 
 ---
 
@@ -122,6 +128,12 @@ The authoritative log is `docs/DECISIONS.md`. Key locks:
 - **D-027** Required columns: holdings (ticker, quantity, cost_basis, currency); watchlist (ticker); prices (ticker, date, close, currency).
 - **D-028** Unknown extra CSV columns: silently ignored.
 - **D-029** CSV delimiter: comma only; no `csv.Sniffer`.
+- **D-030** Metrics engine purity: no I/O, no DB, no network, no system clock; data arrives as arguments.
+- **D-031** Valuation date: latest price_date in supplied input; no system date used.
+- **D-032** Missing price: excluded from valuation (not zero); unpriced tickers and coverage ratios reported.
+- **D-033** Numeric precision: Python float; no Decimal; no engine-side rounding.
+- **D-034** M-006 return basis: daily percentage returns; `statistics.pstdev`; not annualised.
+- **D-035** Phase 4 scope: all six metrics M-001 through M-006, including time-series M-005 and M-006.
 
 Any change to these requires a new dated entry in `DECISIONS.md` (append-only in spirit).
 

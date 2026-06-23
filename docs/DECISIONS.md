@@ -202,3 +202,92 @@ short files; a wrong sniff silently produces malformed parses).
 **Rationale:** Comma is the universal standard and matches any spreadsheet CSV export
 default. If the user provides a non-comma-delimited file, the `MissingColumnError` on the
 header check surfaces it clearly.
+
+---
+
+## D-030 — Metrics engine purity boundary
+
+**Date:** 2026-06-23 (Phase 4)
+**Decision:** `backend/app/metrics/` must not import `sqlite3`, `csv`, `os`, `pathlib`,
+any network library (`requests`, `httpx`, `aiohttp`), `app.data.persistence.*`, or
+`app.data.adapters.*`. All data arrives as function arguments (`list[Holding]`,
+`list[PriceRecord]`). No environment variables, no file I/O, no network access, no
+dependence on the system clock. Enforced by boundary tests in `test_metrics.py`.
+**Rationale:** Purity is a non-negotiable invariant per `PROJECT_BRAIN.md` §2 and
+`ARCHITECTURE.md` §2. Pure functions are trivially testable, deterministic, and composable
+with any future data source without modification.
+
+---
+
+## D-031 — Valuation date policy: latest available input price date
+
+**Date:** 2026-06-23 (Phase 4)
+**Decision:** The metrics engine does not accept an explicit "as-of date" parameter.
+It always uses the most recent `price_date` in the `price_records` list supplied as input
+as its reference point. Time windows (drawdown, volatility) are measured backwards from
+that latest input date — never from `date.today()`, `datetime.now()`, or any system clock.
+**Options considered:** Explicit `as_of_date` parameter (rejected for Phase 4 — filtering
+belongs in the orchestration layer, not the pure engine; callers pass pre-filtered data).
+**Rationale:** System-clock dependence would make tests fragile (date-sensitive) and
+violate the determinism invariant. Caller-provided data defines the temporal context.
+
+---
+
+## D-032 — Missing price behavior: exclude from valuation and report
+
+**Date:** 2026-06-23 (Phase 4)
+**Decision:** A `Holding` with no corresponding `PriceRecord` in the input is excluded
+from market value, weight, and unrealised-change calculations. It is never valued at zero
+(zero would corrupt weight percentages). `PortfolioSnapshot.unpriced_tickers` lists
+every excluded holding. For time-series metrics (M-005, M-006), portfolio value on a given
+date is the sum of `quantity × close_price` for holdings that have a price on that date;
+dates where a holding has no price are included in the series using the holdings that do
+have prices; `min_coverage_ratio` and `latest_coverage_ratio` in `DrawdownResult` and
+`VolatilityResult` expose the data quality so callers can surface warnings.
+**Rationale:** Silently valuing a missing price at zero corrupts all percentage calculations
+downstream. Explicit exclusion with reporting is more transparent and consistent with the
+project's policy of surfacing data quality issues rather than hiding them.
+
+---
+
+## D-033 — Numeric precision: Python float, no engine-side rounding
+
+**Date:** 2026-06-23 (Phase 4)
+**Decision:** All internal and result values use Python `float` (IEEE 754 double precision).
+No `Decimal`. No rounding inside the engine. All result dataclass fields that hold computed
+values are `float` (or `float | None`). Callers and formatters apply display rounding.
+**Rationale:** EOD portfolio metrics do not require accounting-grade reconciliation.
+`Decimal` adds complexity with no v0.1 benefit. Returning raw floats lets the alert engine
+(Phase 5) compare thresholds cleanly without double-rounding artifacts.
+
+---
+
+## D-034 — M-006 return basis: percentage returns, population standard deviation
+
+**Date:** 2026-06-23 (Phase 4)
+**Decision:** M-006 computes standard deviation of **daily percentage returns**
+`(v[t] - v[t-1]) / v[t-1]`, not absolute dollar changes. Standard deviation is computed
+using `statistics.pstdev` (population std dev). The result is not annualised (v0.1
+constraint per `METRICS_SPEC.md`). If `v[t-1] == 0.0`, that return is skipped.
+**Options considered:** Dollar-change std dev (rejected — scale-dependent; grows with
+portfolio value, making alert thresholds non-portable across portfolio sizes).
+**Rationale:** `ALERT_POLICY.md` example shows "2.8%", implying a dimensionless result.
+Percentage returns are scale-independent. Population std dev is appropriate because we
+are measuring the actual returns in the window, not estimating an unobserved population
+parameter.
+
+---
+
+## D-035 — Phase 4 scope: both snapshot and time-series metrics (M-001 through M-006)
+
+**Date:** 2026-06-23 (Phase 4)
+**Decision:** Phase 4 implements all six v0.1 metrics from `METRICS_SPEC.md`. M-001
+through M-004 are snapshot metrics (no price history required beyond the latest price
+per ticker). M-005 (drawdown from peak) and M-006 (30-day return volatility proxy) are
+time-series metrics computed from the supplied price history. Minimum data requirements:
+M-005 requires at least 1 date in the window; M-006 requires at least 2 dates (to produce
+at least 1 daily return). Both return `None` when minimum data is not met — they never
+raise for insufficient data.
+**Rationale:** Deferring M-005 and M-006 to a later phase would leave the alert engine
+(Phase 5) without the drawdown and volatility inputs it needs. All six metrics are
+defined in `METRICS_SPEC.md` for v0.1; implementing them together is the right gate.

@@ -8,7 +8,7 @@
 | 1 | Empty skeleton | ✅ complete |
 | 2 | Data model + local storage | ✅ complete — awaiting human review |
 | 3 | CSV data adapter | ✅ complete — awaiting human review |
-| 4 | Metrics engine | ⛔ not started |
+| 4 | Metrics engine | ✅ complete — awaiting human review |
 | 5 | Alerts + compliance guard | ⛔ not started |
 | 6 | Decision journal | ⛔ not started |
 | 7 | Reports + API layer | ⛔ not started |
@@ -105,7 +105,21 @@ writes them to the database via the repository layer. Implement the concrete
 
 **Scope:** Implement the pure metrics engine. M-001 through M-006 from `METRICS_SPEC.md`.
 
-**Status:** ⛔ Not started.
+**Key deliverables:**
+- `backend/app/metrics/results.py` — `PositionMetrics`, `PortfolioSnapshot`, `DrawdownResult`, `VolatilityResult` frozen dataclasses.
+- `backend/app/metrics/engine.py` — `compute_portfolio_snapshot`, `compute_drawdown`, `compute_volatility_proxy`.
+- `backend/tests/unit/test_metrics.py` — 44 unit tests; no DB fixtures.
+- `DECISIONS.md` updated with D-030 through D-035.
+
+**Acceptance criteria:**
+- All six metrics (M-001 through M-006) implemented.
+- Metrics engine imports no forbidden modules (sqlite3, csv, os, pathlib, network, persistence, adapters).
+- No result field named `profit` or `loss`.
+- Window calculations use latest input price date, not system date.
+- Architecture invariant still passes.
+- `pyproject.toml` dependencies unchanged.
+
+**Status:** ✅ Complete. Awaiting human review before Phase 5 begins.
 
 ---
 
