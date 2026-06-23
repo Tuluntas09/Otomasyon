@@ -32,6 +32,18 @@ CREATE TABLE IF NOT EXISTS prices (
     currency     TEXT NOT NULL DEFAULT 'USD' CHECK(currency = 'USD'),
     PRIMARY KEY (ticker, price_date)
 );
+
+CREATE TABLE IF NOT EXISTS journal_entries (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    entry_date   TEXT NOT NULL,
+    ticker       TEXT,
+    action_taken TEXT NOT NULL,
+    reasoning    TEXT NOT NULL,
+    hypothesis   TEXT,
+    review_date  TEXT,
+    tags         TEXT,
+    created_at   TEXT NOT NULL
+);
 """
 
 

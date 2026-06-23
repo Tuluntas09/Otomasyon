@@ -54,6 +54,10 @@ class CsvImportError(OtomasyonError):
         super().__init__(f"{n} row{'s' if n != 1 else ''} failed validation during CSV import.")
 
 
+class JournalValidationError(ValidationError):
+    """A journal entry value failed a validation rule."""
+
+
 class ComplianceViolationError(OtomasyonError):
     """Generated text contains one or more forbidden terms.
 

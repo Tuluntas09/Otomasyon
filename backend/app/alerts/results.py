@@ -6,7 +6,7 @@ No imports from data persistence, adapters, or I/O layers.
 Allowed severity values: "informational", "watch", "elevated".
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass(frozen=True)

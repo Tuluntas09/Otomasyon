@@ -108,9 +108,16 @@ Full detail: `docs/MVP_SCOPE.md`.
   VOL-001, COV-001. Strict greater-than threshold comparison throughout. Every explanation
   passes compliance before `AlertResult` construction. `313 passed, 0 skipped` —
   architecture invariant green. Decisions D-036 through D-043 recorded.
-- **Phase 6 (decision journal):** ⛔ **not started.**
+- **Phase 6 (decision journal):** ✅ **complete.** `JournalEntry` frozen dataclass and
+  `validate_new_entry()` implemented under `backend/app/journal/`. `JournalRepo`
+  (`add_entry`, `get_all`, `get_by_ticker`) implemented under
+  `backend/app/data/persistence/journal_repo.py`. `journal_entries` DDL added to `db.py`
+  (idempotent). `JournalValidationError` added to `exceptions.py`. Compliance guard is
+  NOT applied to user-authored journal text — fields stored verbatim. `created_at` uses
+  UTC: `datetime.now(timezone.utc).isoformat()`. `358 passed, 0 skipped` — architecture
+  invariant green. Decisions D-044 through D-050 recorded.
 
-**Next gate:** human review before Phase 6 begins.
+**Next gate:** human review before Phase 7 begins.
 
 ---
 
@@ -149,6 +156,13 @@ The authoritative log is `docs/DECISIONS.md`. Key locks:
 - **D-041** Severity labels: informational, watch, elevated only. No urgent/critical.
 - **D-042** Compliance matching: whole-word \b for single terms, bounded phrase for multi-word; false-positive protections verified.
 - **D-043** Alert threshold equality: strict greater-than only; exact equality does not fire.
+- **D-044** Journal persistence: `journal_entries` in existing SQLite DB; repo under `data/persistence/journal_repo.py`.
+- **D-045** Journal append-only: `add_entry`, `get_all`, `get_by_ticker` only; no update/delete.
+- **D-046** User-authored journal text: compliance guard NOT applied; stored verbatim.
+- **D-047** `action_taken` field name retained as user-authored past-tense record text.
+- **D-048** `review_date` must be strictly after `entry_date` if provided.
+- **D-049** Journal ordering: `entry_date DESC, created_at DESC`.
+- **D-050** `created_at` uses UTC: `datetime.now(timezone.utc).isoformat()`.
 
 Any change to these requires a new dated entry in `DECISIONS.md` (append-only in spirit).
 
@@ -249,4 +263,5 @@ honest. If it ever drifts from reality, fix it before doing anything else.*
 - Phase 3 complete
 - Phase 4 complete
 - Phase 5 complete
-- Phase 6 not started
+- Phase 6 complete
+- Phase 7 not started

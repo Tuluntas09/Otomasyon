@@ -10,7 +10,7 @@
 | 3 | CSV data adapter | ✅ complete — awaiting human review |
 | 4 | Metrics engine | ✅ complete — awaiting human review |
 | 5 | Alerts + compliance guard | ✅ complete — awaiting human review |
-| 6 | Decision journal | ⛔ not started |
+| 6 | Decision journal | ✅ complete — awaiting human review |
 | 7 | Reports + API layer | ⛔ not started |
 | 8 | Tier 3 gate review (paper trading research boundary) | ⛔ not started |
 
@@ -153,7 +153,25 @@ text routed through the guard from this phase onward.
 
 **Scope:** Implement journal entry CRUD (append-only writes, queries).
 
-**Status:** ⛔ Not started.
+**Key deliverables:**
+- `backend/app/journal/models.py` — `JournalEntry` frozen dataclass, `validate_new_entry()`.
+- `backend/app/data/persistence/journal_repo.py` — `JournalRepo` (add_entry, get_all, get_by_ticker).
+- `backend/app/data/persistence/db.py` — `journal_entries` DDL added (idempotent).
+- `backend/app/core/exceptions.py` — `JournalValidationError` added.
+- `backend/tests/unit/test_journal.py` — unit tests for domain model and validation.
+- `backend/tests/integration/test_journal_repo.py` — integration tests against in-memory SQLite.
+- `DECISIONS.md` updated with D-044 through D-050.
+
+**Acceptance criteria:**
+- Journal domain model and validation implemented and tested.
+- Persistence append-only: add_entry, get_all, get_by_ticker; no update or delete.
+- created_at uses UTC: datetime.now(timezone.utc).isoformat().
+- Compliance guard is NOT applied to user-authored journal text.
+- Architecture invariant still passes.
+- pyproject.toml dependencies unchanged.
+- Total test count: 358 passed, 0 skipped.
+
+**Status:** ✅ Complete. Awaiting human review before Phase 7 begins.
 
 ---
 

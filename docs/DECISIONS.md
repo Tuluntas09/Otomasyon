@@ -389,3 +389,81 @@ CONC-001, DD-001, VOL-001, and COV-001.
 **Rationale:** Alert wording uses "above", "exceeds", and "ceiling breach" semantics.
 Firing at exact equality would contradict "above the ceiling of X%" when the value IS X%.
 Strict greater-than is also consistent with standard threshold-alarm conventions.
+
+---
+
+## D-044 — Journal persistence location
+
+**Date:** 2026-06-23 (Phase 6)
+**Decision:** The `journal_entries` table is added to the existing SQLite database via
+`CREATE TABLE IF NOT EXISTS` in `backend/app/data/persistence/db.py`. The journal
+persistence repository lives at `backend/app/data/persistence/journal_repo.py`, not under
+`backend/app/journal/`. The `journal/` module contains domain model and validation only.
+**Rationale:** All SQLite access must remain under `backend/app/data/persistence/` per the
+architecture boundary. Mixing persistence into the domain module would break the layering
+invariant enforced by architecture tests.
+
+---
+
+## D-045 — Journal append-only constraint
+
+**Date:** 2026-06-23 (Phase 6)
+**Decision:** `JournalRepo` exposes `add_entry()`, `get_all()`, and `get_by_ticker()` only.
+No `update()` or `delete()` methods exist. Multiple entries for the same ticker are allowed.
+**Rationale:** The decision journal is a factual record of past reasoning. Editing or
+deleting past entries would undermine its value as an honest log. Append-only semantics
+match `JOURNAL_SCHEMA.md` ("entries are append-only").
+
+---
+
+## D-046 — User-authored journal text and the compliance guard
+
+**Date:** 2026-06-23 (Phase 6)
+**Decision:** `check_compliance()` is NOT called on `action_taken`, `reasoning`,
+`hypothesis`, or `tags`. These fields are stored verbatim as user-authored private notes.
+**Rationale:** `JOURNAL_SCHEMA.md` states: "action_taken and reasoning fields are the
+user's own words — they are not scanned by the compliance guard (they record past facts,
+not system advice)." Compliance scanning is reserved for system-generated text only.
+
+---
+
+## D-047 — action_taken field name retained
+
+**Date:** 2026-06-23 (Phase 6)
+**Decision:** The field is named `action_taken` as specified in `JOURNAL_SCHEMA.md`.
+It is user-authored past-tense record text describing what the user did, not
+system-generated advice.
+**Rationale:** `action_taken` accurately names the field's semantics (past tense, user
+record) and does not imply any system recommendation or advisory signal.
+
+---
+
+## D-048 — review_date must be strictly after entry_date
+
+**Date:** 2026-06-23 (Phase 6)
+**Decision:** If `review_date` is provided, it must be strictly after `entry_date`.
+Equal dates raise `JournalValidationError`. `None` is always valid.
+**Rationale:** A review date equal to the entry date is logically meaningless — the user
+cannot review a decision on the same day it was recorded in a forward-looking sense.
+Strict inequality matches `JOURNAL_SCHEMA.md`: "must be a valid ISO-8601 date after entry_date."
+
+---
+
+## D-049 — Journal ordering: entry_date DESC, created_at DESC
+
+**Date:** 2026-06-23 (Phase 6)
+**Decision:** `get_all()` and `get_by_ticker()` return entries ordered by `entry_date DESC,
+created_at DESC`. Most recent decision date first; for same-date entries, most recently
+inserted first.
+**Rationale:** Users most often want to see recent decisions first. Secondary sort by
+`created_at` gives a deterministic and natural order when multiple entries share a date.
+
+---
+
+## D-050 — created_at uses UTC timestamp
+
+**Date:** 2026-06-23 (Phase 6)
+**Decision:** `created_at` is set using `datetime.now(timezone.utc).isoformat()`.
+The resulting string includes UTC timezone information (e.g., `+00:00`).
+**Rationale:** UTC timestamps are deterministic across local timezone changes, safe for
+ordering comparisons across DST transitions, and unambiguous for any future log analysis.
