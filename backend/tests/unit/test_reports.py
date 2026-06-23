@@ -853,3 +853,363 @@ def test_journal_section_body_never_contains_user_reasoning():
     report = build_daily_report(_DATE, _empty_snapshot(), [], [entry])
     journal_section = next(s for s in report.sections if s.label == "Journal Entries")
     assert "quarterly review of concentration" not in journal_section.body
+
+
+# ---------------------------------------------------------------------------
+# Phase 8B — Metric Definitions section
+# ---------------------------------------------------------------------------
+
+
+class TestMetricDefinitionsSection:
+    def test_present_in_daily_report(self):
+        report = build_daily_report(_DATE, _empty_snapshot(), [], [])
+        labels = [s.label for s in report.sections]
+        assert "Metric Definitions" in labels
+
+    def test_present_in_weekly_report(self):
+        report = build_weekly_report(_DATE, _WEEK_START, _empty_snapshot(), None, None, [], [])
+        labels = [s.label for s in report.sections]
+        assert "Metric Definitions" in labels
+
+    def test_present_in_daily_without_data_quality(self):
+        report = build_daily_report(_DATE, _empty_snapshot(), [], [], data_quality=None)
+        labels = [s.label for s in report.sections]
+        assert "Metric Definitions" in labels
+
+    def test_present_in_daily_with_data_quality(self):
+        from app.metrics.quality import DataQualitySummary
+        dq = DataQualitySummary(
+            report_date=_DATE,
+            total_holding_count=0,
+            priced_holding_count=0,
+            unpriced_holding_count=0,
+            coverage_ratio=0.0,
+            unpriced_tickers=[],
+            ticker_quality=[],
+        )
+        report = build_daily_report(_DATE, _empty_snapshot(), [], [], data_quality=dq)
+        labels = [s.label for s in report.sections]
+        assert "Metric Definitions" in labels
+
+    def test_label_passes_compliance(self):
+        report = build_daily_report(_DATE, _empty_snapshot(), [], [])
+        section = next(s for s in report.sections if s.label == "Metric Definitions")
+        check_compliance(section.label)  # must not raise
+
+    def test_body_passes_compliance(self):
+        report = build_daily_report(_DATE, _empty_snapshot(), [], [])
+        section = next(s for s in report.sections if s.label == "Metric Definitions")
+        check_compliance(section.body)  # must not raise
+
+    def test_body_references_m001(self):
+        report = build_daily_report(_DATE, _empty_snapshot(), [], [])
+        section = next(s for s in report.sections if s.label == "Metric Definitions")
+        assert "M-001" in section.body
+
+    def test_body_references_m005(self):
+        report = build_daily_report(_DATE, _empty_snapshot(), [], [])
+        section = next(s for s in report.sections if s.label == "Metric Definitions")
+        assert "M-005" in section.body
+
+    def test_body_references_m006(self):
+        report = build_daily_report(_DATE, _empty_snapshot(), [], [])
+        section = next(s for s in report.sections if s.label == "Metric Definitions")
+        assert "M-006" in section.body
+
+    def test_body_contains_no_advisory_terms(self):
+        report = build_daily_report(_DATE, _empty_snapshot(), [], [])
+        section = next(s for s in report.sections if s.label == "Metric Definitions")
+        for forbidden in ("buy", "sell", "profit", "opportunity", "recommend"):
+            assert forbidden not in section.body.lower(), (
+                f"Forbidden term '{forbidden}' found in Metric Definitions body"
+            )
+
+    def test_body_is_deterministic(self):
+        r1 = build_daily_report(_DATE, _empty_snapshot(), [], [])
+        r2 = build_daily_report(_DATE, _empty_snapshot(), [], [])
+        s1 = next(s for s in r1.sections if s.label == "Metric Definitions")
+        s2 = next(s for s in r2.sections if s.label == "Metric Definitions")
+        assert s1.body == s2.body
+
+    def test_weekly_body_passes_compliance(self):
+        report = build_weekly_report(_DATE, _WEEK_START, _empty_snapshot(), None, None, [], [])
+        section = next(s for s in report.sections if s.label == "Metric Definitions")
+        check_compliance(section.body)
+
+
+# ---------------------------------------------------------------------------
+# Phase 8B — Alert Rule Definitions section
+# ---------------------------------------------------------------------------
+
+
+class TestAlertRuleDefinitionsSection:
+    def test_present_in_daily_report(self):
+        report = build_daily_report(_DATE, _empty_snapshot(), [], [])
+        labels = [s.label for s in report.sections]
+        assert "Alert Rule Definitions" in labels
+
+    def test_present_in_weekly_report(self):
+        report = build_weekly_report(_DATE, _WEEK_START, _empty_snapshot(), None, None, [], [])
+        labels = [s.label for s in report.sections]
+        assert "Alert Rule Definitions" in labels
+
+    def test_label_passes_compliance(self):
+        report = build_daily_report(_DATE, _empty_snapshot(), [], [])
+        section = next(s for s in report.sections if s.label == "Alert Rule Definitions")
+        check_compliance(section.label)
+
+    def test_body_passes_compliance(self):
+        report = build_daily_report(_DATE, _empty_snapshot(), [], [])
+        section = next(s for s in report.sections if s.label == "Alert Rule Definitions")
+        check_compliance(section.body)
+
+    def test_body_references_conc001(self):
+        report = build_daily_report(_DATE, _empty_snapshot(), [], [])
+        section = next(s for s in report.sections if s.label == "Alert Rule Definitions")
+        assert "CONC-001" in section.body
+
+    def test_body_references_dd001(self):
+        report = build_daily_report(_DATE, _empty_snapshot(), [], [])
+        section = next(s for s in report.sections if s.label == "Alert Rule Definitions")
+        assert "DD-001" in section.body
+
+    def test_body_references_vol001(self):
+        report = build_daily_report(_DATE, _empty_snapshot(), [], [])
+        section = next(s for s in report.sections if s.label == "Alert Rule Definitions")
+        assert "VOL-001" in section.body
+
+    def test_body_references_cov001(self):
+        report = build_daily_report(_DATE, _empty_snapshot(), [], [])
+        section = next(s for s in report.sections if s.label == "Alert Rule Definitions")
+        assert "COV-001" in section.body
+
+    def test_body_contains_no_advisory_terms(self):
+        report = build_daily_report(_DATE, _empty_snapshot(), [], [])
+        section = next(s for s in report.sections if s.label == "Alert Rule Definitions")
+        for forbidden in ("buy", "sell", "profit", "opportunity", "recommend"):
+            assert forbidden not in section.body.lower(), (
+                f"Forbidden term '{forbidden}' found in Alert Rule Definitions body"
+            )
+
+    def test_body_is_deterministic(self):
+        r1 = build_daily_report(_DATE, _empty_snapshot(), [], [])
+        r2 = build_daily_report(_DATE, _empty_snapshot(), [], [])
+        s1 = next(s for s in r1.sections if s.label == "Alert Rule Definitions")
+        s2 = next(s for s in r2.sections if s.label == "Alert Rule Definitions")
+        assert s1.body == s2.body
+
+    def test_weekly_body_passes_compliance(self):
+        report = build_weekly_report(_DATE, _WEEK_START, _empty_snapshot(), None, None, [], [])
+        section = next(s for s in report.sections if s.label == "Alert Rule Definitions")
+        check_compliance(section.body)
+
+
+# ---------------------------------------------------------------------------
+# Phase 8B — Data Quality Caveat section
+# ---------------------------------------------------------------------------
+
+
+def _make_dq_summary(
+    total: int,
+    priced: int,
+    unpriced_tickers: list[str] | None = None,
+    report_date: str = _DATE,
+):
+    from app.metrics.quality import DataQualitySummary
+    ut = unpriced_tickers or []
+    unpriced = total - priced
+    ratio = priced / total if total > 0 else 0.0
+    return DataQualitySummary(
+        report_date=report_date,
+        total_holding_count=total,
+        priced_holding_count=priced,
+        unpriced_holding_count=unpriced,
+        coverage_ratio=ratio,
+        unpriced_tickers=ut,
+        ticker_quality=[],
+    )
+
+
+class TestDataQualityCaveatSection:
+    def test_present_when_unpriced_count_greater_than_zero(self):
+        dq = _make_dq_summary(3, 2, ["TSLA"])
+        report = build_daily_report(_DATE, _empty_snapshot(), [], [], data_quality=dq)
+        labels = [s.label for s in report.sections]
+        assert "Data Quality Caveat" in labels
+
+    def test_absent_when_all_positions_priced(self):
+        dq = _make_dq_summary(2, 2)
+        report = build_daily_report(_DATE, _empty_snapshot(), [], [], data_quality=dq)
+        labels = [s.label for s in report.sections]
+        assert "Data Quality Caveat" not in labels
+
+    def test_absent_when_data_quality_is_none(self):
+        report = build_daily_report(_DATE, _empty_snapshot(), [], [], data_quality=None)
+        labels = [s.label for s in report.sections]
+        assert "Data Quality Caveat" not in labels
+
+    def test_absent_for_empty_portfolio(self):
+        dq = _make_dq_summary(0, 0)
+        report = build_daily_report(_DATE, _empty_snapshot(), [], [], data_quality=dq)
+        labels = [s.label for s in report.sections]
+        assert "Data Quality Caveat" not in labels
+
+    def test_label_passes_compliance(self):
+        dq = _make_dq_summary(2, 1, ["MSFT"])
+        report = build_daily_report(_DATE, _empty_snapshot(), [], [], data_quality=dq)
+        section = next(s for s in report.sections if s.label == "Data Quality Caveat")
+        check_compliance(section.label)
+
+    def test_body_passes_compliance(self):
+        dq = _make_dq_summary(2, 1, ["MSFT"])
+        report = build_daily_report(_DATE, _empty_snapshot(), [], [], data_quality=dq)
+        section = next(s for s in report.sections if s.label == "Data Quality Caveat")
+        check_compliance(section.body)
+
+    def test_body_references_coverage_ratio(self):
+        dq = _make_dq_summary(4, 3, ["TSLA"])
+        report = build_daily_report(_DATE, _empty_snapshot(), [], [], data_quality=dq)
+        section = next(s for s in report.sections if s.label == "Data Quality Caveat")
+        assert "75.00%" in section.body
+
+    def test_body_references_unpriced_count(self):
+        dq = _make_dq_summary(4, 2, ["TSLA", "GOOG"])
+        report = build_daily_report(_DATE, _empty_snapshot(), [], [], data_quality=dq)
+        section = next(s for s in report.sections if s.label == "Data Quality Caveat")
+        assert "2" in section.body
+
+    def test_body_references_affected_metric_families(self):
+        dq = _make_dq_summary(2, 1, ["MSFT"])
+        report = build_daily_report(_DATE, _empty_snapshot(), [], [], data_quality=dq)
+        section = next(s for s in report.sections if s.label == "Data Quality Caveat")
+        assert "M-005" in section.body
+        assert "M-006" in section.body
+
+    def test_body_contains_no_advisory_terms(self):
+        dq = _make_dq_summary(2, 1, ["MSFT"])
+        report = build_daily_report(_DATE, _empty_snapshot(), [], [], data_quality=dq)
+        section = next(s for s in report.sections if s.label == "Data Quality Caveat")
+        for forbidden in ("buy", "sell", "profit", "opportunity", "recommend", "suggest"):
+            assert forbidden not in section.body.lower(), (
+                f"Forbidden term '{forbidden}' found in Data Quality Caveat body"
+            )
+
+    def test_present_in_weekly_report_when_unpriced(self):
+        dq = _make_dq_summary(2, 1, ["MSFT"])
+        report = build_weekly_report(
+            _DATE, _WEEK_START, _empty_snapshot(), None, None, [], [], data_quality=dq
+        )
+        labels = [s.label for s in report.sections]
+        assert "Data Quality Caveat" in labels
+
+    def test_absent_in_weekly_when_all_priced(self):
+        dq = _make_dq_summary(2, 2)
+        report = build_weekly_report(
+            _DATE, _WEEK_START, _empty_snapshot(), None, None, [], [], data_quality=dq
+        )
+        labels = [s.label for s in report.sections]
+        assert "Data Quality Caveat" not in labels
+
+    def test_weekly_body_passes_compliance(self):
+        dq = _make_dq_summary(2, 1, ["MSFT"])
+        report = build_weekly_report(
+            _DATE, _WEEK_START, _empty_snapshot(), None, None, [], [], data_quality=dq
+        )
+        section = next(s for s in report.sections if s.label == "Data Quality Caveat")
+        check_compliance(section.body)
+
+
+# ---------------------------------------------------------------------------
+# Phase 8B — Section ordering
+# ---------------------------------------------------------------------------
+
+
+class TestPhase8BSectionOrdering:
+    def _label_index(self, report, label: str) -> int:
+        labels = [s.label for s in report.sections]
+        return labels.index(label)
+
+    def test_data_coverage_before_metric_definitions_daily(self):
+        report = build_daily_report(_DATE, _empty_snapshot(), [], [])
+        assert self._label_index(report, "Data Coverage") < self._label_index(report, "Metric Definitions")
+
+    def test_metric_definitions_before_alert_rule_definitions_daily(self):
+        report = build_daily_report(_DATE, _empty_snapshot(), [], [])
+        assert self._label_index(report, "Metric Definitions") < self._label_index(report, "Alert Rule Definitions")
+
+    def test_alert_rule_definitions_before_portfolio_snapshot_daily(self):
+        report = build_daily_report(_DATE, _empty_snapshot(), [], [])
+        assert self._label_index(report, "Alert Rule Definitions") < self._label_index(report, "Portfolio Snapshot")
+
+    def test_data_quality_summary_before_caveat_daily(self):
+        dq = _make_dq_summary(2, 1, ["MSFT"])
+        report = build_daily_report(_DATE, _empty_snapshot(), [], [], data_quality=dq)
+        assert self._label_index(report, "Data Quality Summary") < self._label_index(report, "Data Quality Caveat")
+
+    def test_caveat_before_metric_definitions_when_present_daily(self):
+        dq = _make_dq_summary(2, 1, ["MSFT"])
+        report = build_daily_report(_DATE, _empty_snapshot(), [], [], data_quality=dq)
+        assert self._label_index(report, "Data Quality Caveat") < self._label_index(report, "Metric Definitions")
+
+    def test_data_coverage_before_metric_definitions_weekly(self):
+        report = build_weekly_report(_DATE, _WEEK_START, _empty_snapshot(), None, None, [], [])
+        assert self._label_index(report, "Data Coverage") < self._label_index(report, "Metric Definitions")
+
+    def test_metric_definitions_before_alert_rule_definitions_weekly(self):
+        report = build_weekly_report(_DATE, _WEEK_START, _empty_snapshot(), None, None, [], [])
+        assert self._label_index(report, "Metric Definitions") < self._label_index(report, "Alert Rule Definitions")
+
+
+# ---------------------------------------------------------------------------
+# Phase 8B — Compliance regression: all sections in a full report pass guard
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("with_data_quality,with_unpriced", [
+    (False, False),
+    (True, False),
+    (True, True),
+])
+def test_all_daily_sections_pass_compliance_regression(with_data_quality, with_unpriced):
+    from app.metrics.quality import DataQualitySummary
+    dq = None
+    if with_data_quality:
+        if with_unpriced:
+            dq = _make_dq_summary(2, 1, ["MSFT"])
+        else:
+            dq = _make_dq_summary(2, 2)
+    report = build_daily_report(
+        _DATE,
+        _snapshot([_priced_pos("AAPL"), _unpriced_pos("MSFT")], unpriced_tickers=["MSFT"]),
+        [_alert(), _fired_alert()],
+        [_journal_entry()],
+        data_quality=dq,
+    )
+    for section in report.sections:
+        check_compliance(section.label)
+        check_compliance(section.body)
+
+
+@pytest.mark.parametrize("with_data_quality,with_unpriced", [
+    (False, False),
+    (True, False),
+    (True, True),
+])
+def test_all_weekly_sections_pass_compliance_regression(with_data_quality, with_unpriced):
+    dq = None
+    if with_data_quality:
+        if with_unpriced:
+            dq = _make_dq_summary(2, 1, ["MSFT"])
+        else:
+            dq = _make_dq_summary(2, 2)
+    report = build_weekly_report(
+        _DATE, _WEEK_START,
+        _snapshot([_priced_pos("AAPL"), _unpriced_pos("MSFT")], unpriced_tickers=["MSFT"]),
+        _drawdown(), _volatility(),
+        [_alert(), _fired_alert()],
+        [_journal_entry()],
+        data_quality=dq,
+    )
+    for section in report.sections:
+        check_compliance(section.label)
+        check_compliance(section.body)

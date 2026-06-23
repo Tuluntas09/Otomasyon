@@ -874,3 +874,123 @@ def test_quality_module_has_no_system_clock_fallback():
     assert "datetime.now(" not in source
     assert ".today(" not in source
     assert "time.time(" not in source
+
+
+# ---------------------------------------------------------------------------
+# 15. Phase 8B — Explainability sections in API responses
+# ---------------------------------------------------------------------------
+
+
+def test_daily_report_has_metric_definitions_section(conn, client):
+    """GET /reports/daily sections include 'Metric Definitions'."""
+    _seed_simple_portfolio(conn)
+    data = client.get("/reports/daily?report_date=2024-01-15").json()
+    labels = [s["label"] for s in data["sections"]]
+    assert "Metric Definitions" in labels
+
+
+def test_daily_report_has_alert_rule_definitions_section(conn, client):
+    """GET /reports/daily sections include 'Alert Rule Definitions'."""
+    _seed_simple_portfolio(conn)
+    data = client.get("/reports/daily?report_date=2024-01-15").json()
+    labels = [s["label"] for s in data["sections"]]
+    assert "Alert Rule Definitions" in labels
+
+
+def test_weekly_report_has_metric_definitions_section(conn, client):
+    """GET /reports/weekly sections include 'Metric Definitions'."""
+    HoldingsRepo(conn).insert(Holding(ticker="AAPL", quantity=10.0, cost_basis=150.0))
+    _seed_weekly_prices(conn)
+    data = client.get(
+        "/reports/weekly?week_start=2024-01-08&report_date=2024-01-15"
+    ).json()
+    labels = [s["label"] for s in data["sections"]]
+    assert "Metric Definitions" in labels
+
+
+def test_weekly_report_has_alert_rule_definitions_section(conn, client):
+    """GET /reports/weekly sections include 'Alert Rule Definitions'."""
+    HoldingsRepo(conn).insert(Holding(ticker="AAPL", quantity=10.0, cost_basis=150.0))
+    _seed_weekly_prices(conn)
+    data = client.get(
+        "/reports/weekly?week_start=2024-01-08&report_date=2024-01-15"
+    ).json()
+    labels = [s["label"] for s in data["sections"]]
+    assert "Alert Rule Definitions" in labels
+
+
+def test_daily_report_metric_definitions_body_passes_compliance(conn, client):
+    """Metric Definitions section body contains no forbidden terms."""
+    _seed_simple_portfolio(conn)
+    data = client.get("/reports/daily?report_date=2024-01-15").json()
+    section = next(s for s in data["sections"] if s["label"] == "Metric Definitions")
+    assert not _FORBIDDEN_IN_SYSTEM.search(section["body"]), (
+        f"Forbidden term in Metric Definitions: {section['body']!r}"
+    )
+
+
+def test_daily_report_alert_rule_definitions_body_passes_compliance(conn, client):
+    """Alert Rule Definitions section body contains no forbidden terms."""
+    _seed_simple_portfolio(conn)
+    data = client.get("/reports/daily?report_date=2024-01-15").json()
+    section = next(s for s in data["sections"] if s["label"] == "Alert Rule Definitions")
+    assert not _FORBIDDEN_IN_SYSTEM.search(section["body"]), (
+        f"Forbidden term in Alert Rule Definitions: {section['body']!r}"
+    )
+
+
+def test_daily_report_data_quality_caveat_present_when_unpriced(conn, client):
+    """Data Quality Caveat section appears in daily report when a position is unpriced."""
+    HoldingsRepo(conn).insert(Holding(ticker="AAPL", quantity=10.0, cost_basis=150.0))
+    HoldingsRepo(conn).insert(Holding(ticker="MSFT", quantity=5.0, cost_basis=200.0))
+    PricesRepo(conn).upsert(PriceRecord(ticker="AAPL", price_date="2024-01-15", close_price=200.0))
+    # MSFT has no price → unpriced_holding_count = 1
+    data = client.get("/reports/daily?report_date=2024-01-15").json()
+    labels = [s["label"] for s in data["sections"]]
+    assert "Data Quality Caveat" in labels
+
+
+def test_daily_report_data_quality_caveat_absent_when_all_priced(conn, client):
+    """Data Quality Caveat section absent when all positions are priced."""
+    _seed_simple_portfolio(conn)  # AAPL fully priced
+    data = client.get("/reports/daily?report_date=2024-01-15").json()
+    labels = [s["label"] for s in data["sections"]]
+    assert "Data Quality Caveat" not in labels
+
+
+def test_daily_report_data_quality_caveat_body_passes_compliance(conn, client):
+    """Data Quality Caveat body contains no forbidden terms."""
+    HoldingsRepo(conn).insert(Holding(ticker="AAPL", quantity=10.0, cost_basis=150.0))
+    HoldingsRepo(conn).insert(Holding(ticker="MSFT", quantity=5.0, cost_basis=200.0))
+    PricesRepo(conn).upsert(PriceRecord(ticker="AAPL", price_date="2024-01-15", close_price=200.0))
+    data = client.get("/reports/daily?report_date=2024-01-15").json()
+    section = next(s for s in data["sections"] if s["label"] == "Data Quality Caveat")
+    assert not _FORBIDDEN_IN_SYSTEM.search(section["body"]), (
+        f"Forbidden term in Data Quality Caveat: {section['body']!r}"
+    )
+
+
+def test_daily_report_no_new_top_level_routes():
+    """API has no unexpected top-level routes beyond the accepted set."""
+    from app.api.app import app as _app
+    routes = {r.path for r in _app.routes}
+    assert "/reports/daily" in routes
+    assert "/reports/weekly" in routes
+    assert "/health" in routes
+    # No write-method routes should exist
+    write_methods = {"POST", "PUT", "PATCH", "DELETE"}
+    for route in _app.routes:
+        if hasattr(route, "methods") and route.methods:
+            assert not (route.methods & write_methods), (
+                f"Write route detected: {route.path} {route.methods}"
+            )
+
+
+def test_builder_does_not_introduce_system_clock():
+    """builder.py does not call datetime.now() or date.today() after Phase 8B additions."""
+    builder_path = (
+        Path(__file__).parent.parent.parent / "app" / "reports" / "builder.py"
+    )
+    source = builder_path.read_text(encoding="utf-8")
+    assert "datetime.now(" not in source
+    assert "date.today(" not in source

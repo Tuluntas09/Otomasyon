@@ -15,6 +15,7 @@
 | 7B | API layer — FastAPI routes | ✅ accepted |
 | 8 | Phase 8 gate review (Option B selected — Tier 2 analytics) | ✅ gate accepted |
 | 8A | Data quality analytics (Option B implementation) | ✅ accepted |
+| 8B | Report explainability + architecture hardening (Option B, Tier 2) | 🔄 complete — awaiting acceptance audit |
 
 ---
 
@@ -279,6 +280,36 @@ market data.
 - Total test count: 585 passed, 0 skipped.
 
 **Status:** ✅ Accepted.
+
+---
+
+## Phase 8B — Report Explainability + Architecture Hardening (Option B, Tier 2)
+
+**Scope:** Pure report builder extension and architecture/test hardening within Tier 2.
+No new API routes, no schema changes, no new repositories, no new runtime dependencies.
+
+**Key deliverables:**
+- `backend/app/reports/builder.py` — three new section builders:
+  `_metric_definitions_section()`, `_alert_rule_definitions_section()`,
+  `_data_quality_caveat_section(data_quality)`.
+- `build_daily_report` and `build_weekly_report` updated with new section ordering (D-079).
+- `backend/tests/unit/test_reports.py` — 49 new unit tests covering new sections.
+- `backend/tests/integration/test_api_reports.py` — 13 new integration tests.
+- `backend/tests/architecture/test_no_broker_no_execution.py` — 2 new invariant tests.
+- `docs/DECISIONS.md` — D-075 through D-080 recorded.
+
+**Acceptance criteria:**
+- All new section text passes `check_compliance()` before `ReportSection` construction.
+- `ComplianceViolationError` propagates — never caught in builder.
+- Metric Definitions and Alert Rule Definitions appear in all daily and weekly reports.
+- Data Quality Caveat appears only when `unpriced_holding_count > 0`.
+- No advisory language in any new section text.
+- No new runtime dependencies.
+- Architecture invariant extended: 10 tests total.
+- Total test count: 647 passed, 0 skipped.
+- Journal text remains verbatim and is not compliance-scanned.
+
+**Status:** 🔄 Complete — awaiting acceptance audit.
 
 ---
 

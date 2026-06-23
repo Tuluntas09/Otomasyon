@@ -805,3 +805,95 @@ function (unit), report builder integration (unit), API response shape and conte
 compliance (no forbidden language in generated text), and architecture invariant extension.
 **Rationale:** Consistent with the per-phase test gate established across Phases 2–7B.
 Each new module and integration path must have dedicated tests before acceptance.
+
+---
+
+## D-075 — Phase 8B boundary: Report Explainability + Hardening, Tier 2 only
+
+**Date:** 2026-06-23 (Phase 8B)
+**Decision:** Phase 8B implements report explainability improvements and architecture/test
+hardening only, within Tier 2. Specifically: a "Metric Definitions" `ReportSection`
+describing M-001 through M-006 in fact-stating language; an "Alert Rule Definitions"
+`ReportSection` describing CONC-001, DD-001, VOL-001, and COV-001 threshold conditions;
+a conditional "Data Quality Caveat" `ReportSection` added when `unpriced_holding_count > 0`
+explaining which computed facts are affected by incomplete local price data; and companion
+architecture hardening tests (broader forbidden-import scan, compliance regression tests,
+conditional behavior tests, route boundary tests, builder purity tests).
+**Options considered:** Candidate B (API contract clarity — deferred), Candidate C-gap
+(gap detection — deferred to Phase 8C), Candidate D hardening only — adopted as companion.
+**Rationale:** Candidate A is the lowest-risk, highest-clarity improvement within the
+existing architecture. Pure builder extension; no new API routes, no schema changes, no
+new repositories, no new runtime dependencies.
+
+---
+
+## D-076 — Phase 8B purity constraint: new section builders are pure functions
+
+**Date:** 2026-06-23 (Phase 8B)
+**Decision:** All new functions added to `backend/app/reports/builder.py` in Phase 8B
+(`_metric_definitions_section`, `_alert_rule_definitions_section`,
+`_data_quality_caveat_section`) satisfy the same purity invariant as existing section
+builders: no I/O, no system clock, no environment variables, no persistence imports,
+no network access. Data arrives as function arguments. `report_date` is always
+caller-provided (consistent with D-031 and D-056).
+**Rationale:** Consistent with D-030, D-052, and D-068.
+
+---
+
+## D-077 — Phase 8B compliance constraint: all new section text passes check_compliance()
+
+**Date:** 2026-06-23 (Phase 8B)
+**Decision:** All strings placed in new Phase 8B `ReportSection` labels and bodies pass
+`check_compliance()` through `_make_section()` before `ReportSection` construction,
+consistent with D-054. No new compliance guard wordlist extensions were required for
+metric definition or alert rule description language. `ComplianceViolationError` is not
+caught or suppressed in any new builder function.
+**Rationale:** Consistent with D-039 and D-054. Compliance is a non-optional chokepoint.
+
+---
+
+## D-078 — Phase 8B architecture invariant: broader forbidden-import scan added
+
+**Date:** 2026-06-23 (Phase 8B)
+**Decision:** `backend/tests/architecture/test_no_broker_no_execution.py` is extended
+with two new invariant tests: `test_no_system_shell_or_socket_in_app` (no `os.system()`,
+`subprocess`, or raw `socket` usage in `backend/app/`) and
+`test_no_external_http_client_imports_in_app` (no `requests`, `httpx`, `aiohttp`, or
+`urllib.request` imports in `backend/app/`). These run alongside the existing eight tests.
+**Rationale:** Consistent with D-070. The invariant test grows with the codebase.
+Phase 8B adds no new modules but the broader scan future-proofs the boundary.
+
+---
+
+## D-079 — Phase 8B report section placement policy
+
+**Date:** 2026-06-23 (Phase 8B)
+**Decision:** The final section ordering in daily and weekly reports is:
+  Daily: Report → Data Coverage → [Data Quality Summary] → [Data Quality Caveat] →
+    Metric Definitions → Alert Rule Definitions → Portfolio Snapshot → Position Weights →
+    Alert Summary → Journal Entries → Method Note → Disclaimer.
+  Weekly: Report → Week Range → Data Coverage → [Data Quality Summary] →
+    [Data Quality Caveat] → Metric Definitions → Alert Rule Definitions →
+    Portfolio Snapshot → Drawdown Summary → Volatility Proxy Summary → Position Weights →
+    Alert Summary → Journal Entries → Method Note → Disclaimer.
+  Sections in brackets are conditional. Metric Definitions and Alert Rule Definitions
+  are unconditional — always present.
+**Rationale:** Explainability sections placed before data sections so the user reads
+definitions before computed values. Conditional caveat placed immediately after the
+Data Quality Summary it contextualises. Placement determined by builder; not
+configurable by callers.
+
+---
+
+## D-080 — Phase 8B test gate: 647 tests passed, 0 skipped
+
+**Date:** 2026-06-23 (Phase 8B)
+**Decision:** Phase 8B implementation is complete when `python -m pytest backend/tests/`
+returns 647 passed, 0 skipped. The 62 new tests cover: Metric Definitions section
+presence, label, body, and compliance (daily and weekly); Alert Rule Definitions section
+presence, label, body, and compliance (daily and weekly); Data Quality Caveat conditional
+behavior (present/absent/compliance); section ordering invariants; parametrised compliance
+regression tests for all sections across data quality scenarios; API integration tests for
+new sections in both routes; route purity (no new write routes, no system clock in
+builder); and two new architecture invariant tests.
+**Rationale:** Consistent with the per-phase test gate established across Phases 2–8A.

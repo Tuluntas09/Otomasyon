@@ -134,3 +134,51 @@ def test_quality_module_has_no_advisory_language() -> None:
         "Advisory signal language detected in metrics/quality.py.\n"
         "Phase 8A is descriptive analytics only — no trade signals."
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 8B — Broader forbidden-import scan across all of backend/app/
+# ---------------------------------------------------------------------------
+
+_SYSTEM_SHELL_RE = re.compile(
+    r"\bos\.system\s*\(|subprocess\.|socket\.\w",
+    re.MULTILINE,
+)
+
+_EXTERNAL_HTTP_RE = re.compile(
+    r"^\s*(import|from)\s+(requests|httpx|aiohttp|urllib\.request)",
+    re.MULTILINE | re.IGNORECASE,
+)
+
+
+def test_no_system_shell_or_socket_in_app() -> None:
+    """No os.system(), subprocess calls, or raw socket usage in backend/app/."""
+    violations: list[str] = []
+    for path in _source_files():
+        if not str(path).endswith(".py"):
+            continue
+        text = path.read_text(encoding="utf-8", errors="replace")
+        if _SYSTEM_SHELL_RE.search(text):
+            violations.append(str(path))
+    assert not violations, (
+        "os.system(), subprocess, or socket usage detected in application source.\n"
+        "These are forbidden in backend/app/ — analytics layers must not invoke"
+        " system shells or open network sockets directly.\n"
+        "Affected files:\n" + "\n".join(f"  {v}" for v in violations)
+    )
+
+
+def test_no_external_http_client_imports_in_app() -> None:
+    """No requests, httpx, aiohttp, or urllib.request imports in backend/app/."""
+    violations: list[str] = []
+    for path in _source_files():
+        if not str(path).endswith(".py"):
+            continue
+        text = path.read_text(encoding="utf-8", errors="replace")
+        if _EXTERNAL_HTTP_RE.search(text):
+            violations.append(str(path))
+    assert not violations, (
+        "External HTTP client import detected in application source.\n"
+        "The tool is local-first — no outbound HTTP from backend/app/.\n"
+        "Affected files:\n" + "\n".join(f"  {v}" for v in violations)
+    )

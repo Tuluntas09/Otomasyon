@@ -166,6 +166,80 @@ def _disclaimer_section() -> ReportSection:
     return _make_section(label, body)
 
 
+def _metric_definitions_section() -> ReportSection:
+    label = "Metric Definitions"
+    body = (
+        "M-001 (Position Weight): The fraction of total portfolio market value"
+        " represented by one position. Computed as the position's market value"
+        " divided by total portfolio market value. Expressed as a proportion.\n"
+        "M-002 (Portfolio Market Value): The total market value of all data-supported"
+        " positions. Computed as the sum of quantity multiplied by the most recent"
+        " end-of-day close price for each priced position. Reported in USD.\n"
+        "M-003 (Cost Basis per Position): The total amount paid for a position."
+        " Computed as quantity multiplied by cost per unit at acquisition. Reported in USD.\n"
+        "M-004 (Unrealised Change in Value): The difference between a position's"
+        " current market value and its total cost basis. Reported in USD and as a"
+        " percentage of cost basis.\n"
+        "M-005 (Drawdown from Peak): The percentage decline of portfolio market value"
+        " from its highest value within a trailing 90-day window. Computed from locally"
+        " stored price data. Window runs backward from the latest available price date.\n"
+        "M-006 (Volatility Proxy): Population standard deviation of daily portfolio"
+        " value percentage changes over a trailing 30-day window. Computed from locally"
+        " stored price data. Not annualised."
+    )
+    return _make_section(label, body)
+
+
+def _alert_rule_definitions_section() -> ReportSection:
+    label = "Alert Rule Definitions"
+    body = (
+        "CONC-001 (Single-Position Concentration): Evaluates whether any single"
+        " position's weight exceeds a configured ceiling. The alert fires when the"
+        " computed weight is strictly above the ceiling. Applies to all data-supported"
+        " positions. A weight exactly equal to the ceiling does not fire.\n"
+        "DD-001 (Drawdown from Peak): Evaluates whether the portfolio value percentage"
+        " decline from its trailing 90-day peak exceeds a configured ceiling. The alert"
+        " fires when the computed drawdown is strictly above the ceiling. Requires at"
+        " least one price date in the window.\n"
+        "VOL-001 (Volatility Proxy): Evaluates whether the population standard deviation"
+        " of daily portfolio value percentage changes over a trailing 30-day window"
+        " exceeds a configured threshold. The alert fires when the computed value is"
+        " strictly above the threshold. Requires at least two price dates in the window.\n"
+        "COV-001 (Price Coverage): Evaluates the count of positions that have no"
+        " available close price. The alert fires when the count is strictly above the"
+        " configured maximum."
+    )
+    return _make_section(label, body)
+
+
+def _data_quality_caveat_section(data_quality: DataQualitySummary) -> ReportSection:
+    label = "Data Quality Caveat"
+    total = data_quality.total_holding_count
+    priced = data_quality.priced_holding_count
+    unpriced = data_quality.unpriced_holding_count
+    ratio = data_quality.coverage_ratio
+    report_date = data_quality.report_date
+    body = "\n".join([
+        f"Coverage as of {report_date}: {priced} of {total} position(s) are"
+        f" data-supported. Coverage ratio: {ratio:.2%}."
+        f" {unpriced} position(s) have no price data on or before the report date"
+        f" and are excluded from affected computations.",
+        "Affected metrics:",
+        "M-001 (Position Weight): computed for data-supported positions only."
+        " Positions without price data are not included in weight computations.",
+        "M-002 (Portfolio Market Value): computed as the sum of data-supported"
+        " positions only.",
+        "M-004 (Unrealised Change in Value): not available for positions without"
+        " price data.",
+        "M-005 (Drawdown from Peak) and M-006 (Volatility Proxy): time-series values"
+        " are computed from dates where at least one position has price data."
+        " Positions without price data are excluded from each date's portfolio value.",
+        f"All figures in this report reflect only the data available in the local"
+        f" database as of {report_date}.",
+    ])
+    return _make_section(label, body)
+
+
 def _data_quality_section(data_quality: DataQualitySummary) -> ReportSection:
     label = "Data Quality Summary"
     total = data_quality.total_holding_count
@@ -274,7 +348,11 @@ def build_daily_report(
     ]
     if data_quality is not None:
         sections.append(_data_quality_section(data_quality))
+    if data_quality is not None and data_quality.unpriced_holding_count > 0:
+        sections.append(_data_quality_caveat_section(data_quality))
     sections += [
+        _metric_definitions_section(),
+        _alert_rule_definitions_section(),
         _snapshot_section(snapshot),
         _weights_section(snapshot),
         _alert_section(alert_results),
@@ -325,7 +403,11 @@ def build_weekly_report(
     ]
     if data_quality is not None:
         sections.append(_data_quality_section(data_quality))
+    if data_quality is not None and data_quality.unpriced_holding_count > 0:
+        sections.append(_data_quality_caveat_section(data_quality))
     sections += [
+        _metric_definitions_section(),
+        _alert_rule_definitions_section(),
         _snapshot_section(snapshot),
         _drawdown_section(drawdown),
         _volatility_section(volatility),

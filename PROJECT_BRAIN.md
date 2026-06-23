@@ -148,8 +148,20 @@ Full detail: `docs/MVP_SCOPE.md`.
   No paper trading, no simulated orders, no broker abstraction, no technical indicators,
   no backtesting, no external market data, no scheduler, no notifications introduced.
 
-**v0.1 implementation accepted. Phase 8A (Tier 2 analytics) complete.**
-Phase 8 further work (if any) requires its own dated DECISIONS.md entry and explicit
+- **Phase 8B (report explainability + hardening — Option B, Tier 2):** 🔄 **complete —
+  awaiting acceptance audit.** Three new compliance-checked `ReportSection` builders added
+  to `backend/app/reports/builder.py`: "Metric Definitions" (M-001 through M-006 in
+  fact-stating language), "Alert Rule Definitions" (CONC-001, DD-001, VOL-001, COV-001
+  threshold conditions), and "Data Quality Caveat" (conditional on
+  `unpriced_holding_count > 0`; explains which computed facts are affected by incomplete
+  local price data). Section ordering updated (D-079). Architecture invariant extended
+  with broader forbidden-import scan (D-078). `647 passed, 0 skipped` — all invariants
+  green. Decisions D-075 through D-080 recorded. No paper trading, no simulated orders,
+  no broker abstraction, no technical indicators, no backtesting, no external market data,
+  no scheduler, no notifications, no new API routes introduced.
+
+**v0.1 implementation accepted. Phase 8A (Tier 2 analytics) accepted. Phase 8B complete — awaiting acceptance audit.**
+Phase 8 further work requires its own dated DECISIONS.md entry and explicit
 human approval before any code is written.
 
 ---
@@ -212,6 +224,13 @@ The authoritative log is `docs/DECISIONS.md`. Key locks:
 - **D-064** Alert inclusion in API: embedded in report sections; no separate top-level alerts array.
 - **D-065** v0.1 completion: Phase 7B accepted + all tests green + docs updated + no forbidden scope.
 - **D-066** DataAdapter journal extension: `get_journal_entries(date_from, date_to)` on ABC and adapter.
+
+- **D-075** Phase 8B boundary: report explainability + hardening, Tier 2 only.
+- **D-076** Phase 8B purity: new section builders are pure functions.
+- **D-077** Phase 8B compliance: all new section text passes `check_compliance()`.
+- **D-078** Phase 8B architecture invariant: broader forbidden-import scan added.
+- **D-079** Phase 8B section placement: final section ordering documented.
+- **D-080** Phase 8B test gate: 647 passed, 0 skipped.
 
 Any change to these requires a new dated entry in `DECISIONS.md` (append-only in spirit).
 
@@ -318,4 +337,5 @@ honest. If it ever drifts from reality, fix it before doing anything else.*
 - v0.1 implementation accepted
 - Phase 8 gate plan created; Option B (Tier 2 analytics) selected
 - Phase 8A accepted (data quality analytics — Option B, Tier 2)
+- Phase 8B complete — awaiting acceptance audit (report explainability + hardening)
 - Further Phase 8 work requires deliberate human approval
