@@ -7,7 +7,7 @@
 | 0 | Documentation | ✅ accepted |
 | 1 | Empty skeleton | ✅ complete |
 | 2 | Data model + local storage | ✅ complete — awaiting human review |
-| 3 | CSV data adapter | ⛔ not started |
+| 3 | CSV data adapter | ✅ complete — awaiting human review |
 | 4 | Metrics engine | ⛔ not started |
 | 5 | Alerts + compliance guard | ⛔ not started |
 | 6 | Decision journal | ⛔ not started |
@@ -76,10 +76,28 @@ substantive test: the architectural invariant.
 
 ## Phase 3 — CSV data adapter
 
-**Scope:** Implement the CSV adapter that reads holdings and price CSVs and writes them to
-the database via the repository layer.
+**Scope:** Implement the CSV adapter that reads holdings, watchlist, and prices CSVs and
+writes them to the database via the repository layer. Implement the concrete
+`SQLiteDataAdapter` satisfying the Phase 2 `DataAdapter` ABC.
 
-**Status:** ⛔ Not started.
+**Key deliverables:**
+- `backend/app/data/adapters/sqlite_adapter.py` — `SQLiteDataAdapter` concrete class.
+- `backend/app/data/adapters/csv_importer.py` — `import_holdings_csv`,
+  `import_watchlist_csv`, `import_prices_csv`; `ImportResult`; `RowImportError`.
+- `backend/app/core/exceptions.py` — `MissingColumnError`, `CsvImportError`.
+- Phase 3 unit and integration tests.
+- `DECISIONS.md` updated with D-024 through D-029.
+
+**Acceptance criteria:**
+- Architecture invariant still passes.
+- All Phase 3 placeholder skips replaced with passing tests.
+- `SQLiteDataAdapter` satisfies `DataAdapter` ABC.
+- Holdings/watchlist all-or-nothing: no partial writes on error.
+- Prices partial import: valid rows written, invalid rows in `ImportResult.errors`.
+- DB duplicate pre-check in Pass 1 prevents any write before validation is complete.
+- `pyproject.toml` dependencies unchanged (no third-party packages).
+
+**Status:** ✅ Complete. Awaiting human review before Phase 4 begins.
 
 ---
 

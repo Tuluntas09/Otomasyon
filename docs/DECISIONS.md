@@ -120,3 +120,85 @@ and is more discoverable for a local-first tool).
 **Rationale:** Environment variable override allows tests to use `:memory:` without
 patching code. The project-specific name (`OTOMASYON_DB_PATH`) avoids collisions with
 other tools in the same environment.
+
+---
+
+## D-024 — CSV parser: stdlib csv only
+
+**Date:** 2026-06-23 (Phase 3)
+**Decision:** Use Python stdlib `csv.DictReader` for all CSV parsing. No `pandas`, `polars`,
+`numpy`, or any third-party CSV library.
+**Rationale:** `pyproject.toml` keeps `dependencies = []`. `csv.DictReader` satisfies all
+v0.1 requirements (header-based parsing, comma delimiter, string extraction) with zero
+added dependencies.
+
+---
+
+## D-025 — CSV import transaction behavior
+
+**Date:** 2026-06-23 (Phase 3)
+**Decision:** Holdings and watchlist imports are all-or-nothing. Pass 1 validates every row
+and pre-checks DB duplicates (loading existing tickers from the repo) before any write
+begins. Pass 2 writes only when Pass 1 produced zero errors. Any failure raises
+`CsvImportError`. Prices imports use row-level error collection: valid rows are upserted
+immediately; invalid rows are appended to `ImportResult.errors`; the function always
+returns an `ImportResult` and never raises `CsvImportError`.
+**Options considered:** all-or-nothing for all three types (simpler, but would make
+re-ingesting large price files impractical if one row is malformed).
+**Rationale:** A portfolio is only meaningful when complete — partial holdings produce wrong
+metrics. Price records are independent; partial ingestion is safe and consistent with the
+D-022 upsert policy that already assumes re-imports are normal.
+
+---
+
+## D-026 — Supported CSV import types in v0.1
+
+**Date:** 2026-06-23 (Phase 3)
+**Decision:** Three import types are supported: `holdings`, `watchlist`, `prices`. Each has
+its own named function (`import_holdings_csv`, `import_watchlist_csv`,
+`import_prices_csv`). No generic dispatcher is implemented in Phase 3.
+**Rationale:** Three types map directly to the three Phase 2 repositories. Direct function
+calls are more Pythonic and remove indirection with no current consumer to justify it.
+
+---
+
+## D-027 — Required CSV columns per import type
+
+**Date:** 2026-06-23 (Phase 3)
+**Decision:**
+
+| Import type | Required columns |
+|---|---|
+| holdings | `ticker`, `quantity`, `cost_basis`, `currency` |
+| watchlist | `ticker` |
+| prices | `ticker`, `date`, `close`, `currency` |
+
+Absence of any required column raises `MissingColumnError` after reading the header row,
+before any data rows are processed.
+**Rationale:** Column names match `DATA_SOURCES.md` exactly for holdings and prices.
+Watchlist format is new in Phase 3; `ticker` is the only meaningful field.
+
+---
+
+## D-028 — Unknown extra CSV columns: ignore
+
+**Date:** 2026-06-23 (Phase 3)
+**Decision:** Extra columns beyond the required set are silently ignored.
+**Options considered:** warn (no output mechanism exists yet in Phase 3); reject (breaks
+CSV exports from spreadsheets or brokerage tools that include metadata columns).
+**Rationale:** Ignoring extra columns reduces friction with zero safety risk — the importer
+only reads the named columns it needs. Rejecting them would force users to manually clean
+exports.
+
+---
+
+## D-029 — CSV delimiter: comma only
+
+**Date:** 2026-06-23 (Phase 3)
+**Decision:** Comma (`,`) is the only supported delimiter in v0.1. `csv.Sniffer` is not
+used.
+**Options considered:** `csv.Sniffer` for automatic detection (rejected — unreliable on
+short files; a wrong sniff silently produces malformed parses).
+**Rationale:** Comma is the universal standard and matches any spreadsheet CSV export
+default. If the user provides a non-comma-delimited file, the `MissingColumnError` on the
+header check surfaces it clearly.

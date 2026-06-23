@@ -29,6 +29,23 @@ User provides a CSV file with their current portfolio positions.
 
 ---
 
+### Watchlist CSV
+
+User provides a CSV file listing tickers to monitor. Format defined in Phase 3 (D-027).
+
+**Expected columns:**
+
+| Column | Type | Notes |
+|---|---|---|
+| `ticker` | TEXT | Exchange ticker symbol (uppercase) |
+
+**Validation on import:**
+- Ticker must match the valid format (1–10 uppercase alphanumeric chars, starts with a letter).
+- Duplicate tickers within the file are rejected (`DuplicateTickerError`).
+- Tickers already present in the watchlist are rejected (`DuplicateTickerError`).
+
+---
+
 ### Prices CSV
 
 User provides a CSV file of end-of-day price data.

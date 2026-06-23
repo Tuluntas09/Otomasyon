@@ -35,3 +35,20 @@ class InvalidDateError(ValidationError):
 
 class DuplicateTickerError(OtomasyonError):
     """A ticker that already exists was inserted again."""
+
+
+class MissingColumnError(ValidationError):
+    """A required CSV column is absent from the header row."""
+
+
+class CsvImportError(OtomasyonError):
+    """One or more rows in an all-or-nothing CSV import failed validation.
+
+    Attributes:
+        errors: list of RowImportError describing each failed row.
+    """
+
+    def __init__(self, errors: list) -> None:
+        self.errors = errors
+        n = len(errors)
+        super().__init__(f"{n} row{'s' if n != 1 else ''} failed validation during CSV import.")

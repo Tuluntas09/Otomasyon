@@ -89,11 +89,15 @@ Full detail: `docs/MVP_SCOPE.md`.
 - **Phase 2 (data model + local storage):** ✅ **complete.** Domain models (`Holding`,
   `WatchlistEntry`, `PriceRecord`), typed exceptions, validation helpers, SQLite schema,
   and three repositories (`HoldingsRepo`, `WatchlistRepo`, `PricesRepo`) implemented.
-  `DataAdapter` ABC defined. `101 passed, 3 skipped` — architecture invariant green.
-  Decisions D-020 through D-023 recorded.
-- **Phase 3 (CSV data adapter):** ⛔ **not started.**
+  `DataAdapter` ABC defined. Decisions D-020 through D-023 recorded.
+- **Phase 3 (CSV data adapter):** ✅ **complete.** `SQLiteDataAdapter` (concrete DataAdapter),
+  `import_holdings_csv`, `import_watchlist_csv`, `import_prices_csv` implemented.
+  All-or-nothing for holdings/watchlist with DB duplicate pre-check. Row-level error
+  collection for prices. `178 passed, 0 skipped` — architecture invariant green.
+  Decisions D-024 through D-029 recorded.
+- **Phase 4 (metrics engine):** ⛔ **not started.**
 
-**Next gate:** human review before any Phase 3 work begins.
+**Next gate:** human review before any Phase 4 work begins.
 
 ---
 
@@ -112,6 +116,12 @@ The authoritative log is `docs/DECISIONS.md`. Key locks:
 - **D-021** Watchlist duplicate ticker → `DuplicateTickerError`.
 - **D-022** Price duplicate (ticker, price_date) → upsert (idempotent re-ingestion).
 - **D-023** DB path from `OTOMASYON_DB_PATH` env var; default `./data/otomasyon.db`.
+- **D-024** CSV parser: stdlib `csv.DictReader` only; no third-party dependencies.
+- **D-025** Holdings/watchlist imports: all-or-nothing with DB duplicate pre-check. Prices: row-level error collection.
+- **D-026** Supported CSV types: holdings, watchlist, prices.
+- **D-027** Required columns: holdings (ticker, quantity, cost_basis, currency); watchlist (ticker); prices (ticker, date, close, currency).
+- **D-028** Unknown extra CSV columns: silently ignored.
+- **D-029** CSV delimiter: comma only; no `csv.Sniffer`.
 
 Any change to these requires a new dated entry in `DECISIONS.md` (append-only in spirit).
 
