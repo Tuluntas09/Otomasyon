@@ -12,7 +12,7 @@
 | 5 | Alerts + compliance guard | ✅ complete — awaiting human review |
 | 6 | Decision journal | ✅ complete — awaiting human review |
 | 7A | Reports — pure builder | ✅ complete — awaiting human review |
-| 7B | API layer — FastAPI routes | ✅ complete — awaiting acceptance audit |
+| 7B | API layer — FastAPI routes | ✅ accepted |
 | 8 | Tier 3 gate review (paper trading research boundary) | ⛔ not started |
 
 ---
@@ -234,7 +234,7 @@ Journal entries carried verbatim without compliance scanning.
 - pyproject.toml has `fastapi>=0.100.0` runtime dependency and dev optional dependency.
 - Total test count > 451. Zero skipped.
 
-**Status:** ✅ Complete — awaiting human acceptance audit before v0.1 is declared done.
+**Status:** ✅ Accepted. v0.1 implementation accepted. Phase 8 (Tier 3 gate review) requires its own deliberate decision and explicit human approval before any code is written.
 
 ---
 

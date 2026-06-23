@@ -126,17 +126,18 @@ Full detail: `docs/MVP_SCOPE.md`.
   must be ≤ `report_date`; invalid dates raise `InvalidDateError`. `451 passed, 0 skipped`
   — architecture invariant green. Decisions D-051 through D-057 recorded.
 
-- **Phase 7B (API layer):** ✅ **implementation complete — awaiting acceptance audit.**
-  Minimal read-only FastAPI routes implemented under `backend/app/api/`. Three routes:
-  `GET /health`, `GET /reports/daily`, `GET /reports/weekly`. Per-request SQLite connection
-  via `deps.get_conn()` using D-023 path policy. Full orchestration: SQLiteDataAdapter →
-  metrics → alerts → report builder → `dataclasses.asdict()` → JSON. `DataAdapter` ABC
-  extended with `get_journal_entries(date_from, date_to)`; `SQLiteDataAdapter` delegates
-  to `JournalRepo.get_by_date_range()` (D-066). No persistence repo imports in route
-  modules. `500 passed, 0 skipped` — architecture invariant green.
-  Decisions D-058 through D-066 recorded.
+- **Phase 7B (API layer):** ✅ **accepted.** Minimal read-only FastAPI routes implemented
+  under `backend/app/api/`. Three routes: `GET /health`, `GET /reports/daily`,
+  `GET /reports/weekly`. Per-request SQLite connection via `deps.get_conn()` using D-023
+  path policy. Full orchestration: SQLiteDataAdapter → metrics → alerts → report builder →
+  `dataclasses.asdict()` → JSON. `DataAdapter` ABC extended with `get_journal_entries
+  (date_from, date_to)`; `SQLiteDataAdapter` delegates to `JournalRepo.get_by_date_range()`
+  (D-066). No persistence repo imports in route modules. `500 passed, 0 skipped` —
+  architecture invariant green. Decisions D-058 through D-066 recorded.
 
-**Next gate:** Phase 7B acceptance audit. v0.1 is NOT declared done until audit is complete.
+**v0.1 implementation accepted.** Phase 8 (Tier 3 gate review — paper trading research
+boundary) requires its own dated DECISIONS.md entry and explicit human approval before
+any code is written. It is not automatic.
 
 ---
 
@@ -300,5 +301,6 @@ honest. If it ever drifts from reality, fix it before doing anything else.*
 - Phase 5 complete
 - Phase 6 complete
 - Phase 7A complete (pure report builder)
-- Phase 7B implementation complete — awaiting acceptance audit
-- v0.1 implementation done — NOT declared complete until Phase 7B acceptance audit passes
+- Phase 7B accepted
+- v0.1 implementation accepted
+- Phase 8 not started — requires deliberate human approval
