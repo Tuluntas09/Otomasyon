@@ -5,13 +5,13 @@
 | Phase | Name | Status |
 |---|---|---|
 | 0 | Documentation | ✅ accepted |
-| 1 | Empty skeleton | ✅ complete |
-| 2 | Data model + local storage | ✅ complete — awaiting human review |
-| 3 | CSV data adapter | ✅ complete — awaiting human review |
-| 4 | Metrics engine | ✅ complete — awaiting human review |
-| 5 | Alerts + compliance guard | ✅ complete — awaiting human review |
-| 6 | Decision journal | ✅ complete — awaiting human review |
-| 7A | Reports — pure builder | ✅ complete — awaiting human review |
+| 1 | Empty skeleton | ✅ accepted |
+| 2 | Data model + local storage | ✅ accepted |
+| 3 | CSV data adapter | ✅ accepted |
+| 4 | Metrics engine | ✅ accepted |
+| 5 | Alerts + compliance guard | ✅ accepted |
+| 6 | Decision journal | ✅ accepted |
+| 7A | Reports — pure builder | ✅ accepted |
 | 7B | API layer — FastAPI routes | ✅ accepted |
 | 8 | Phase 8 gate review (Option B selected — Tier 2 analytics) | ✅ gate accepted |
 | 8A | Data quality analytics (Option B implementation) | ✅ accepted |
