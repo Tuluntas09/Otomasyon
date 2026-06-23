@@ -467,3 +467,103 @@ inserted first.
 The resulting string includes UTC timezone information (e.g., `+00:00`).
 **Rationale:** UTC timestamps are deterministic across local timezone changes, safe for
 ordering comparisons across DST transitions, and unambiguous for any future log analysis.
+
+---
+
+## D-051 — Phase 7A implementation boundary
+
+**Date:** 2026-06-23 (Phase 7A)
+**Decision:** Phase 7A implements the pure report builder only (`backend/app/reports/`).
+Phase 7B (minimal FastAPI routes under `backend/app/api/`) requires separate human approval
+before implementation begins. No report delivery, scheduling, push, email, frontend UI, or
+manual-run surface is included in Phase 7A.
+**Rationale:** Incremental phase gates allow each layer to be audited independently.
+The report builder is a pure composition function that can be reviewed in isolation from
+any API surface.
+
+---
+
+## D-052 — Report builder input model
+
+**Date:** 2026-06-23 (Phase 7A)
+**Decision:** `build_daily_report()` and `build_weekly_report()` accept
+already-computed result objects (`PortfolioSnapshot`, `DrawdownResult | None`,
+`VolatilityResult | None`, `list[AlertResult]`, `list[JournalEntry]`) as plain function
+arguments. The report builder does not access `DataAdapter`, SQLite repositories, CSV
+importers, filesystem, network, or the system clock. The caller is responsible for
+fetching and pre-filtering all data before invoking the builder.
+**Rationale:** Keeping the builder pure and I/O-free makes it trivially testable (no
+fixtures), composable with any future orchestration layer, and consistent with the purity
+invariant already established for the metrics and alert engines.
+
+---
+
+## D-053 — Report builder output format
+
+**Date:** 2026-06-23 (Phase 7A)
+**Decision:** The builder returns frozen dataclasses: `DailyReport` and `WeeklyReport`,
+each containing `list[ReportSection]` (system-generated, compliance-checked text blocks)
+and `list[JournalEntry]` (user-authored entries carried verbatim, not compliance-scanned).
+`ReportSection` holds a `label` and a `body` — both compliance-checked strings.
+Rendering, serialisation, and formatting are the caller's responsibility.
+**Rationale:** Frozen dataclasses are immutable, safely hashable, and consistent with the
+pattern used throughout the project (metrics results, alert results, journal entry).
+Separating journal entries from system-generated sections makes the verbatim/not-scanned
+boundary unambiguous.
+
+---
+
+## D-054 — Compliance policy for report text
+
+**Date:** 2026-06-23 (Phase 7A)
+**Decision:** Every system-generated string placed in a `ReportSection.label` or
+`ReportSection.body` must pass `check_compliance()` before the `ReportSection` is
+constructed. `ComplianceViolationError` is never caught or rewritten inside the builder —
+it propagates to the caller. User-authored `JournalEntry` fields (`action_taken`,
+`reasoning`, `hypothesis`, `tags`) are not passed through `check_compliance()` and are
+not placed inside any `ReportSection.body`. This is consistent with D-046.
+**Rationale:** Compliance is a non-negotiable chokepoint (ARCHITECTURE.md §4).
+Hard failure on a violation ensures that non-compliant generated text cannot reach
+the user in any form.
+
+---
+
+## D-055 — Alert inclusion policy in reports
+
+**Date:** 2026-06-23 (Phase 7A)
+**Decision:** Reports include all evaluated `AlertResult` objects, both fired and
+non-fired. The alert summary section shows the status, severity, measured value,
+threshold, and explanation for every result passed in.
+**Rationale:** Consistent with D-038 (evaluate_alerts returns all results). A non-firing
+alert is informative — its absence would be ambiguous. Showing "within threshold" for
+non-fired rules gives the user a complete picture of the evaluation.
+
+---
+
+## D-056 — Report date / timestamp policy
+
+**Date:** 2026-06-23 (Phase 7A)
+**Decision:** `report_date` (and `week_start` for weekly reports) are caller-provided
+ISO-8601 date strings. The report builder does not call `datetime.now()`, `date.today()`,
+or any system clock. Both dates are validated with `validate_iso_date()`. For weekly
+reports, `week_start` must be on or before `report_date`; violation raises
+`InvalidDateError`.
+**Rationale:** Consistent with D-031 (valuation date policy). System-clock independence
+makes tests deterministic, avoids date-sensitive fragility, and keeps the builder pure.
+
+---
+
+## D-057 — v0.1 closeout boundary
+
+**Date:** 2026-06-23 (Phase 7A)
+**Decision:** v0.1 is not complete at the end of Phase 7A. v0.1 is complete only after
+Phase 7B (minimal FastAPI routes) is separately approved, implemented, audited, and
+accepted. The definition of done for v0.1: all six metrics computed, all four alert rules
+evaluated, compliance guard active on all system-generated output, decision journal
+operational, daily/weekly report builder complete, minimal read-only API routes functional,
+all tests green, architecture invariant green, and all docs updated. Phase 8 is the Tier 3
+gate review (paper trading research boundary) — a conscious deliberate decision, not
+automatic.
+**Rationale:** The API layer is the surface through which the frontend will consume
+reports; shipping v0.1 without any API surface would leave the product unusable. Phase 7B
+must be completed before v0.1 can be declared done.

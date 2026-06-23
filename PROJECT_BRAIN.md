@@ -117,7 +117,16 @@ Full detail: `docs/MVP_SCOPE.md`.
   UTC: `datetime.now(timezone.utc).isoformat()`. `358 passed, 0 skipped` — architecture
   invariant green. Decisions D-044 through D-050 recorded.
 
-**Next gate:** human review before Phase 7 begins.
+- **Phase 7A (report builder):** ✅ **complete.** Pure report builder implemented under
+  `backend/app/reports/`. `ReportSection`, `DailyReport`, `WeeklyReport` frozen dataclasses.
+  `build_daily_report`, `build_weekly_report` builder functions. No I/O, no DB, no system
+  clock. Every system-generated `ReportSection` label/body passes `check_compliance()`.
+  Journal entries carried verbatim in `journal_entries`; compliance guard NOT applied to
+  user-authored fields. All evaluated alerts (fired and non-fired) included. `week_start`
+  must be ≤ `report_date`; invalid dates raise `InvalidDateError`. `451 passed, 0 skipped`
+  — architecture invariant green. Decisions D-051 through D-057 recorded.
+
+**Next gate:** human review before Phase 7B begins. v0.1 is NOT complete until Phase 7B is accepted.
 
 ---
 
@@ -163,6 +172,13 @@ The authoritative log is `docs/DECISIONS.md`. Key locks:
 - **D-048** `review_date` must be strictly after `entry_date` if provided.
 - **D-049** Journal ordering: `entry_date DESC, created_at DESC`.
 - **D-050** `created_at` uses UTC: `datetime.now(timezone.utc).isoformat()`.
+- **D-051** Phase 7A boundary: pure report builder only; Phase 7B API routes require separate approval.
+- **D-052** Report builder inputs: already-computed result objects as arguments; no DataAdapter/DB/I/O.
+- **D-053** Report builder outputs: frozen `DailyReport`/`WeeklyReport`/`ReportSection` dataclasses.
+- **D-054** Report compliance: all system-generated `ReportSection` text checked; journal fields verbatim.
+- **D-055** Alert inclusion: all evaluated alerts (fired and non-fired) in every report.
+- **D-056** Report date policy: `report_date` and `week_start` caller-provided; no system clock.
+- **D-057** v0.1 closeout: complete only after Phase 7B acceptance; Phase 8 = Tier 3 gate review.
 
 Any change to these requires a new dated entry in `DECISIONS.md` (append-only in spirit).
 
@@ -264,4 +280,6 @@ honest. If it ever drifts from reality, fix it before doing anything else.*
 - Phase 4 complete
 - Phase 5 complete
 - Phase 6 complete
-- Phase 7 not started
+- Phase 7A complete (pure report builder) — awaiting human review
+- Phase 7B not started — requires separate approval
+- v0.1 not complete until Phase 7B accepted

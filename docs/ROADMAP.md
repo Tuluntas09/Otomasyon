@@ -11,7 +11,8 @@
 | 4 | Metrics engine | ✅ complete — awaiting human review |
 | 5 | Alerts + compliance guard | ✅ complete — awaiting human review |
 | 6 | Decision journal | ✅ complete — awaiting human review |
-| 7 | Reports + API layer | ⛔ not started |
+| 7A | Reports — pure builder | ✅ complete — awaiting human review |
+| 7B | API layer — FastAPI routes | ⛔ not started — requires separate approval |
 | 8 | Tier 3 gate review (paper trading research boundary) | ⛔ not started |
 
 ---
@@ -175,11 +176,42 @@ text routed through the guard from this phase onward.
 
 ---
 
-## Phase 7 — Reports + API layer
+## Phase 7A — Reports: pure builder
 
-**Scope:** Assemble daily/weekly reports. Wire FastAPI routes for frontend consumption.
+**Scope:** Implement pure daily/weekly report builder under `backend/app/reports/`.
+No I/O, no DB, no API routes. All system-generated text passes through compliance guard.
+Journal entries carried verbatim without compliance scanning.
 
-**Status:** ⛔ Not started.
+**Key deliverables:**
+- `backend/app/reports/models.py` — `ReportSection`, `DailyReport`, `WeeklyReport` frozen dataclasses.
+- `backend/app/reports/builder.py` — `build_daily_report`, `build_weekly_report`, `_make_section`.
+- `backend/tests/unit/test_reports.py` — 93 unit tests; no DB fixtures.
+- `docs/DECISIONS.md` updated with D-051 through D-057.
+
+**Acceptance criteria:**
+- `build_daily_report` and `build_weekly_report` return frozen dataclasses.
+- Every `ReportSection` label and body passes `check_compliance()` before construction.
+- `ComplianceViolationError` propagates — never caught inside builder.
+- Journal entries carried verbatim in `journal_entries`; `check_compliance()` not called on user fields.
+- All evaluated alerts (fired and non-fired) included in alert summary section.
+- `DrawdownResult=None` and `VolatilityResult=None` produce safe "not available" text.
+- Zero-position and all-unpriced portfolios produce valid reports.
+- `reports/` imports no `sqlite3`, `csv`, `os`, `pathlib`, network libs, persistence, or adapters.
+- No `datetime.now()` or `date.today()` call in builder.
+- Architecture invariant still passes.
+- `pyproject.toml` dependencies unchanged.
+- Total test count: 451 passed, 0 skipped.
+
+**Status:** ✅ Complete. Awaiting human review before Phase 7B begins.
+
+---
+
+## Phase 7B — API layer: FastAPI routes
+
+**Scope:** Wire minimal read-only FastAPI routes for frontend consumption of reports.
+Requires separate human approval before implementation.
+
+**Status:** ⛔ Not started — requires separate approval.
 
 ---
 
