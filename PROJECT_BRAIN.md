@@ -135,7 +135,7 @@ Full detail: `docs/MVP_SCOPE.md`.
   (D-066). No persistence repo imports in route modules. `500 passed, 0 skipped` —
   architecture invariant green. Decisions D-058 through D-066 recorded.
 
-- **Phase 8A (data quality analytics — Option B, Tier 2):** ✅ **complete.** Pure data
+- **Phase 8A (data quality analytics — Option B, Tier 2):** ✅ **accepted.** Pure data
   quality function `compute_data_quality(holdings, price_records, report_date)` implemented
   under `backend/app/metrics/quality.py`. Returns `DataQualitySummary` (portfolio-level
   coverage counts, coverage ratio, unpriced tickers list) and per-ticker `TickerQuality`
@@ -317,5 +317,5 @@ honest. If it ever drifts from reality, fix it before doing anything else.*
 - Phase 7B accepted
 - v0.1 implementation accepted
 - Phase 8 gate plan created; Option B (Tier 2 analytics) selected
-- Phase 8A complete (data quality analytics — Option B, Tier 2)
+- Phase 8A accepted (data quality analytics — Option B, Tier 2)
 - Further Phase 8 work requires deliberate human approval

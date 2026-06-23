@@ -14,7 +14,7 @@
 | 7A | Reports — pure builder | ✅ complete — awaiting human review |
 | 7B | API layer — FastAPI routes | ✅ accepted |
 | 8 | Phase 8 gate review (Option B selected — Tier 2 analytics) | ✅ gate accepted |
-| 8A | Data quality analytics (Option B implementation) | ✅ complete |
+| 8A | Data quality analytics (Option B implementation) | ✅ accepted |
 
 ---
 
@@ -278,7 +278,7 @@ market data.
 - No new runtime dependencies.
 - Total test count: 585 passed, 0 skipped.
 
-**Status:** ✅ Complete.
+**Status:** ✅ Accepted.
 
 ---
 
