@@ -895,5 +895,6 @@ presence, label, body, and compliance (daily and weekly); Data Quality Caveat co
 behavior (present/absent/compliance); section ordering invariants; parametrised compliance
 regression tests for all sections across data quality scenarios; API integration tests for
 new sections in both routes; route purity (no new write routes, no system clock in
-builder); and two new architecture invariant tests.
+builder); and two new architecture invariant tests. Architecture invariant total: 8 tests
+(3 original + 3 Phase 8A + 2 Phase 8B).
 **Rationale:** Consistent with the per-phase test gate established across Phases 2–8A.

@@ -305,11 +305,11 @@ No new API routes, no schema changes, no new repositories, no new runtime depend
 - Data Quality Caveat appears only when `unpriced_holding_count > 0`.
 - No advisory language in any new section text.
 - No new runtime dependencies.
-- Architecture invariant extended: 10 tests total.
+- Architecture invariant extended: 8 tests total (3 original + 3 Phase 8A + 2 Phase 8B).
 - Total test count: 647 passed, 0 skipped.
 - Journal text remains verbatim and is not compliance-scanned.
 
-**Status:** 🔄 Complete — awaiting acceptance audit.
+**Status:** ✅ Accepted.
 
 ---
 
