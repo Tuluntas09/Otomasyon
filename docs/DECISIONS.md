@@ -898,3 +898,125 @@ new sections in both routes; route purity (no new write routes, no system clock 
 builder); and two new architecture invariant tests. Architecture invariant total: 8 tests
 (3 original + 3 Phase 8A + 2 Phase 8B).
 **Rationale:** Consistent with the per-phase test gate established across Phases 2–8A.
+
+---
+
+## D-081 — Phase 8C boundary: Local Price Gap Diagnostics + Repository Hardening, Tier 2 only
+
+**Date:** 2026-06-23 (Phase 8C)
+**Decision:** Phase 8C implements local price-date gap diagnostics and repository/architecture
+hardening only, within Tier 2. Specifically: a pure helper `_compute_largest_gap` and four
+new fields on `TickerQuality` (`local_price_date_count_on_or_before_report_date`,
+`largest_price_date_gap_days`, `largest_price_date_gap_start`, `largest_price_date_gap_end`);
+updated "Data Quality Summary" `ReportSection` text including per-ticker gap facts and a
+general gap methodology note; API response enriched via the existing `data_quality.ticker_quality`
+serialization path; and companion hardening tests (adapter boundary, route purity, quality
+module layer isolation, system-clock purity). No new API routes, no new persistence tables,
+no new adapter abstract methods, no new runtime dependencies.
+**Options considered:** Candidate B (CSV import diagnostics — deferred), Candidate C
+(API contract documentation — deferred to frontend build phase), Candidate D hardening
+only — adopted as companion.
+**Rationale:** Candidate A is the natural continuation of Phase 8A data quality analytics,
+was explicitly deferred to Phase 8C in Phase 8B planning, and requires only a pure
+function extension within the existing metrics module. Lowest boundary risk of all
+candidates. Highest diagnostic value relative to scope.
+
+---
+
+## D-082 — Phase 8C purity constraint: gap computation is a pure function
+
+**Date:** 2026-06-23 (Phase 8C)
+**Decision:** All new functions added in Phase 8C for gap computation (`_compute_largest_gap`,
+and the extended `compute_data_quality`) satisfy the same purity invariant as the existing
+analytics functions (D-030, D-068): no I/O, no system clock, no environment variables,
+no persistence imports, no network access. All data arrives as function arguments already
+fetched by the caller. `report_date` is always caller-provided, consistent with D-031
+and D-056. Duplicate price dates are collapsed before gap computation to prevent false
+zero-day gaps.
+**Rationale:** Consistent with the purity invariant maintained across Phases 4–8B.
+Pure functions are testable without fixtures and composable with any future orchestration.
+
+---
+
+## D-083 — Phase 8C compliance constraint: gap text passes check_compliance()
+
+**Date:** 2026-06-23 (Phase 8C)
+**Decision:** All system-generated strings describing gap facts placed in the "Data Quality
+Summary" `ReportSection` body pass `check_compliance()` through `_make_section()` before
+`ReportSection` construction, consistent with D-054 and D-077. No compliance guard
+wordlist extensions are required for gap description language (calendar day counts, ISO
+date strings, ticker names). Gap text is factual and descriptive only: it states the
+observed gap size and dates, not significance or implication. No advisory language is
+used or required. Wording uses "local price-date gap" and "calendar day(s)" consistently
+and does not reference exchange calendars, trading sessions, or market days.
+**Rationale:** Consistent with D-039, D-054, D-069, and D-077. Compliance is a
+non-optional chokepoint for all system-generated text.
+
+---
+
+## D-084 — Phase 8C data model: TickerQuality extension
+
+**Date:** 2026-06-23 (Phase 8C)
+**Decision:** `TickerQuality` frozen dataclass in `backend/app/metrics/quality.py` gains
+four new fields appended after the existing six:
+  `local_price_date_count_on_or_before_report_date: int` — count of unique local price
+    dates on or before report_date (duplicates collapsed).
+  `largest_price_date_gap_days: int | None` — calendar days of the largest consecutive
+    gap between unique local price dates on or before report_date.
+  `largest_price_date_gap_start: str | None` — ISO-8601 date string for the start of
+    the largest gap.
+  `largest_price_date_gap_end: str | None` — ISO-8601 date string for the end of the
+    largest gap.
+All three gap fields are None when fewer than two unique local price dates exist on or
+before report_date. Tie behavior: when multiple consecutive gaps share the same length,
+the earliest (first in ascending date order) is reported. The existing `data_quality`
+API key surfaces the new fields automatically via `dataclasses.asdict()`. No new top-level
+API key is added. No new API routes.
+**Rationale:** Consistent with D-071 (data quality result format). Additive field
+additions to frozen dataclasses are backward-compatible with existing tests and call sites
+that use `compute_data_quality()` rather than direct `TickerQuality(...)` construction.
+`dataclasses.asdict()` recurses into nested frozen dataclasses without route-layer changes
+(D-072).
+
+---
+
+## D-085 — Phase 8C architecture invariant: extended for Phase 8C modules
+
+**Date:** 2026-06-23 (Phase 8C)
+**Decision:** `backend/tests/architecture/test_no_broker_no_execution.py` is extended
+with four new invariant tests:
+  `test_no_raw_sql_in_api_routes` — no raw SQL statements in `api/routes/`.
+  `test_no_direct_repo_imports_in_api_routes` — no direct `app.data.persistence.*`
+    imports in `api/routes/`.
+  `test_quality_module_has_no_layer_imports` — `metrics/quality.py` imports nothing
+    from `app.data.persistence`, `app.api`, `app.reports`, `app.alerts`, or
+    `app.compliance`.
+  `test_quality_module_has_no_system_clock` — belt-and-suspenders purity check that
+    `.now(`, `.today(`, and `time.time(` do not appear in `metrics/quality.py`.
+Architecture invariant total: 12 tests (3 original + 3 Phase 8A + 2 Phase 8B + 4 Phase 8C).
+**Rationale:** Consistent with D-070 and D-078. The invariant test grows with the codebase.
+New functions and integration paths must be covered before acceptance.
+
+---
+
+## D-086 — Phase 8C test gate: 701 tests passed, 0 skipped
+
+**Date:** 2026-06-23 (Phase 8C)
+**Decision:** Phase 8C implementation is accepted when `python -m pytest backend/tests/`
+returns 701 passed, 0 skipped. The 54 new tests cover: gap fields None for no records;
+gap fields None for single local date; gap fields None for only-future dates; two-date
+gap computation (days, start, end); multiple gaps — largest selected; tie behavior —
+earliest gap returned; duplicate dates — collapsed, no false gap; future dates — excluded
+from gap and local count; non-held tickers — ignored; frozen dataclass with new fields;
+daily report Data Quality Summary includes gap text, calendar-day language,
+local-price-date-gap phrase, gap methodology note, no-exchange-session note, no gap
+phrase for single-date ticker; section body and label pass compliance; no market-session
+language; weekly report includes gap info; local price date count in section body;
+daily and weekly API responses include all four Phase 8C fields in ticker_quality;
+gap field values correct; gap null for single price date; no new API routes or write
+routes; gap text passes compliance in API response; architecture invariant extended
+(four new tests); route raw-SQL check; route direct-repo-import check; quality module
+layer isolation; quality module system-clock purity.
+**Rationale:** Consistent with the per-phase test gate established across Phases 2–8B.
+Each new module, integration path, and boundary extension must have dedicated tests
+before acceptance.

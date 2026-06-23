@@ -182,3 +182,105 @@ def test_no_external_http_client_imports_in_app() -> None:
         "The tool is local-first — no outbound HTTP from backend/app/.\n"
         "Affected files:\n" + "\n".join(f"  {v}" for v in violations)
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 8C — Adapter/repository boundary and route purity hardening
+# ---------------------------------------------------------------------------
+
+_ROUTES_DIR = _REPO_ROOT / "backend" / "app" / "api" / "routes"
+
+_RAW_SQL_RE = re.compile(
+    r"\b(SELECT|INSERT\s+INTO|UPDATE\s+\w|DELETE\s+FROM|CREATE\s+TABLE|DROP\s+TABLE)\b",
+    re.IGNORECASE | re.MULTILINE,
+)
+
+_PERSISTENCE_IMPORT_RE = re.compile(
+    r"^\s*(import|from)\s+app\.data\.persistence\.",
+    re.MULTILINE,
+)
+
+
+def test_no_raw_sql_in_api_routes() -> None:
+    """API route modules contain no raw SQL statements.
+
+    All data access must flow through SQLiteDataAdapter, never through raw SQL
+    strings executed directly in route handlers.
+    """
+    if not _ROUTES_DIR.exists():
+        return
+    violations: list[str] = []
+    for path in _ROUTES_DIR.rglob("*.py"):
+        text = path.read_text(encoding="utf-8", errors="replace")
+        if _RAW_SQL_RE.search(text):
+            violations.append(str(path))
+    assert not violations, (
+        "Raw SQL detected in api/routes/.\n"
+        "Route handlers must not contain raw SQL — all data access must go"
+        " through SQLiteDataAdapter.\n"
+        "Affected files:\n" + "\n".join(f"  {v}" for v in violations)
+    )
+
+
+def test_no_direct_repo_imports_in_api_routes() -> None:
+    """API route modules do not import persistence repositories directly.
+
+    Route handlers access data only through SQLiteDataAdapter, not through
+    direct imports of HoldingsRepo, PricesRepo, JournalRepo, or similar.
+    """
+    if not _ROUTES_DIR.exists():
+        return
+    violations: list[str] = []
+    for path in _ROUTES_DIR.rglob("*.py"):
+        text = path.read_text(encoding="utf-8", errors="replace")
+        if _PERSISTENCE_IMPORT_RE.search(text):
+            violations.append(str(path))
+    assert not violations, (
+        "Direct persistence repository import detected in api/routes/.\n"
+        "Route handlers must access data only through SQLiteDataAdapter"
+        " per the adapter boundary (D-066, D-072).\n"
+        "Affected files:\n" + "\n".join(f"  {v}" for v in violations)
+    )
+
+
+def test_quality_module_has_no_layer_imports() -> None:
+    """metrics/quality.py does not import from persistence, API, reports, alerts, or compliance.
+
+    The quality module is a pure analytics function. It must not depend on any
+    layer above or beside it in the architecture.
+    """
+    quality_path = _APP_DIR / "metrics" / "quality.py"
+    if not quality_path.exists():
+        return
+    text = quality_path.read_text(encoding="utf-8", errors="replace")
+    forbidden_patterns = [
+        r"from app\.data\.persistence",
+        r"from app\.api",
+        r"from app\.reports",
+        r"from app\.alerts",
+        r"from app\.compliance",
+    ]
+    for pattern in forbidden_patterns:
+        assert not re.search(pattern, text), (
+            f"Forbidden import pattern {pattern!r} found in metrics/quality.py.\n"
+            "The quality module must remain a pure analytics function with no"
+            " dependency on persistence, API, reports, alerts, or compliance layers."
+        )
+
+
+def test_quality_module_has_no_system_clock() -> None:
+    """metrics/quality.py does not call system clock functions.
+
+    Belt-and-suspenders check alongside the unit-level purity tests.
+    compute_data_quality is a pure function — report_date is always caller-provided.
+    """
+    quality_path = _APP_DIR / "metrics" / "quality.py"
+    if not quality_path.exists():
+        return
+    text = quality_path.read_text(encoding="utf-8", errors="replace")
+    for pattern in (".now(", ".today(", "time.time("):
+        assert pattern not in text, (
+            f"System clock call {pattern!r} found in metrics/quality.py.\n"
+            "compute_data_quality must remain pure — report_date is caller-provided"
+            " (D-031, D-056, D-082)."
+        )

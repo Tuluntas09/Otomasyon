@@ -15,7 +15,8 @@
 | 7B | API layer — FastAPI routes | ✅ accepted |
 | 8 | Phase 8 gate review (Option B selected — Tier 2 analytics) | ✅ gate accepted |
 | 8A | Data quality analytics (Option B implementation) | ✅ accepted |
-| 8B | Report explainability + architecture hardening (Option B, Tier 2) | 🔄 complete — awaiting acceptance audit |
+| 8B | Report explainability + architecture hardening (Option B, Tier 2) | ✅ accepted |
+| 8C | Local price-date gap diagnostics + repository hardening (Option B, Tier 2) | 🔄 complete — awaiting acceptance audit |
 
 ---
 
@@ -310,6 +311,45 @@ No new API routes, no schema changes, no new repositories, no new runtime depend
 - Journal text remains verbatim and is not compliance-scanned.
 
 **Status:** ✅ Accepted.
+
+---
+
+## Phase 8C — Local Price-Date Gap Diagnostics + Repository Hardening (Option B, Tier 2)
+
+**Scope:** Pure data quality analytics extension and repository/architecture hardening within
+Tier 2. No new API routes, no new persistence tables, no new adapter abstract methods,
+no new runtime dependencies.
+
+**Key deliverables:**
+- `backend/app/metrics/quality.py` — `_compute_largest_gap` pure helper; four new fields
+  on `TickerQuality` (`local_price_date_count_on_or_before_report_date`,
+  `largest_price_date_gap_days`, `largest_price_date_gap_start`,
+  `largest_price_date_gap_end`); `compute_data_quality` extended.
+- `backend/app/reports/builder.py` — `_data_quality_section` updated with per-ticker gap
+  facts and gap methodology note. No new section types. No API route changes.
+- `backend/tests/unit/test_data_quality.py` — 44 new unit tests for gap computation,
+  report integration, and compliance.
+- `backend/tests/integration/test_api_reports.py` — 7 new integration tests for API
+  response shape and gap field values.
+- `backend/tests/architecture/test_no_broker_no_execution.py` — 4 new invariant tests
+  (raw SQL check, direct repo import check, quality module layer isolation,
+  quality module system-clock purity).
+- `docs/DECISIONS.md` — D-081 through D-086 recorded.
+
+**Acceptance criteria:**
+- Gap computation is pure: no I/O, no system clock, no persistence imports.
+- Duplicate dates collapsed — no false zero-day gaps.
+- Future price dates ignored for gap computation and local count.
+- Non-held tickers ignored.
+- Tie behavior: earliest gap returned when multiple gaps share the same length.
+- All new report section text passes `check_compliance()`.
+- No market-session, trading-day, or exchange-calendar language in generated text.
+- Gap fields appear under `data_quality.ticker_quality` in both API responses.
+- No new API routes. No write routes.
+- Architecture invariant extended: 12 tests total (3 + 3 + 2 + 4).
+- Total test count: 701 passed, 0 skipped.
+
+**Status:** 🔄 Complete — awaiting acceptance audit.
 
 ---
 

@@ -994,3 +994,106 @@ def test_builder_does_not_introduce_system_clock():
     source = builder_path.read_text(encoding="utf-8")
     assert "datetime.now(" not in source
     assert "date.today(" not in source
+
+
+# ---------------------------------------------------------------------------
+# 16. Phase 8C — local price-date gap fields in API responses
+# ---------------------------------------------------------------------------
+
+
+def test_daily_api_gap_fields_present_in_ticker_quality(conn, client):
+    """GET /reports/daily ticker_quality entries include Phase 8C gap fields."""
+    HoldingsRepo(conn).insert(Holding(ticker="AAPL", quantity=10.0, cost_basis=100.0))
+    PricesRepo(conn).upsert(PriceRecord(ticker="AAPL", price_date="2024-01-10", close_price=100.0))
+    PricesRepo(conn).upsert(PriceRecord(ticker="AAPL", price_date="2024-01-15", close_price=110.0))
+    data = client.get("/reports/daily?report_date=2024-01-15").json()
+    tq = data["data_quality"]["ticker_quality"][0]
+    for field in (
+        "largest_price_date_gap_days",
+        "largest_price_date_gap_start",
+        "largest_price_date_gap_end",
+        "local_price_date_count_on_or_before_report_date",
+    ):
+        assert field in tq, f"ticker_quality missing Phase 8C field: {field!r}"
+
+
+def test_daily_api_gap_field_values_correct(conn, client):
+    """GET /reports/daily gap field values reflect the actual local price-date gap."""
+    HoldingsRepo(conn).insert(Holding(ticker="AAPL", quantity=10.0, cost_basis=100.0))
+    PricesRepo(conn).upsert(PriceRecord(ticker="AAPL", price_date="2024-01-10", close_price=100.0))
+    PricesRepo(conn).upsert(PriceRecord(ticker="AAPL", price_date="2024-01-15", close_price=110.0))
+    data = client.get("/reports/daily?report_date=2024-01-15").json()
+    tq = data["data_quality"]["ticker_quality"][0]
+    assert tq["largest_price_date_gap_days"] == 5
+    assert tq["largest_price_date_gap_start"] == "2024-01-10"
+    assert tq["largest_price_date_gap_end"] == "2024-01-15"
+    assert tq["local_price_date_count_on_or_before_report_date"] == 2
+
+
+def test_daily_api_gap_none_for_single_price_date(conn, client):
+    """GET /reports/daily gap fields are null when only one local price date exists."""
+    HoldingsRepo(conn).insert(Holding(ticker="AAPL", quantity=10.0, cost_basis=100.0))
+    PricesRepo(conn).upsert(PriceRecord(ticker="AAPL", price_date="2024-01-15", close_price=100.0))
+    data = client.get("/reports/daily?report_date=2024-01-15").json()
+    tq = data["data_quality"]["ticker_quality"][0]
+    assert tq["largest_price_date_gap_days"] is None
+    assert tq["largest_price_date_gap_start"] is None
+    assert tq["largest_price_date_gap_end"] is None
+    assert tq["local_price_date_count_on_or_before_report_date"] == 1
+
+
+def test_weekly_api_gap_fields_present_in_ticker_quality(conn, client):
+    """GET /reports/weekly ticker_quality entries include Phase 8C gap fields."""
+    HoldingsRepo(conn).insert(Holding(ticker="AAPL", quantity=10.0, cost_basis=100.0))
+    _seed_weekly_prices(conn)
+    data = client.get(
+        "/reports/weekly?week_start=2024-01-08&report_date=2024-01-15"
+    ).json()
+    tq = data["data_quality"]["ticker_quality"][0]
+    for field in (
+        "largest_price_date_gap_days",
+        "largest_price_date_gap_start",
+        "largest_price_date_gap_end",
+        "local_price_date_count_on_or_before_report_date",
+    ):
+        assert field in tq, f"ticker_quality missing Phase 8C field: {field!r}"
+
+
+def test_weekly_api_gap_local_count_correct(conn, client):
+    """GET /reports/weekly local_price_date_count reflects dates on or before report_date."""
+    HoldingsRepo(conn).insert(Holding(ticker="AAPL", quantity=10.0, cost_basis=100.0))
+    _seed_weekly_prices(conn)  # 6 price records: 2024-01-08 through 2024-01-15
+    data = client.get(
+        "/reports/weekly?week_start=2024-01-08&report_date=2024-01-15"
+    ).json()
+    tq = data["data_quality"]["ticker_quality"][0]
+    assert tq["local_price_date_count_on_or_before_report_date"] == 6
+
+
+def test_no_new_api_routes_in_phase8c(client):
+    """Phase 8C adds no new API routes — only the three accepted routes exist."""
+    from app.api.app import app as _app
+    accepted = {"/reports/daily", "/reports/weekly", "/health"}
+    actual_paths = {r.path for r in _app.routes if hasattr(r, "path")}
+    for path in accepted:
+        assert path in actual_paths, f"Accepted route missing: {path!r}"
+    write_methods = {"POST", "PUT", "PATCH", "DELETE"}
+    for route in _app.routes:
+        if hasattr(route, "methods") and route.methods:
+            assert not (route.methods & write_methods), (
+                f"Write route found: {getattr(route, 'path', '?')} {route.methods}"
+            )
+
+
+def test_daily_api_data_quality_section_includes_gap_text(conn, client):
+    """GET /reports/daily Data Quality Summary section includes gap diagnostics text."""
+    HoldingsRepo(conn).insert(Holding(ticker="AAPL", quantity=10.0, cost_basis=100.0))
+    PricesRepo(conn).upsert(PriceRecord(ticker="AAPL", price_date="2024-01-10", close_price=100.0))
+    PricesRepo(conn).upsert(PriceRecord(ticker="AAPL", price_date="2024-01-15", close_price=110.0))
+    data = client.get("/reports/daily?report_date=2024-01-15").json()
+    dq_section = next(s for s in data["sections"] if s["label"] == "Data Quality Summary")
+    assert "local price-date gap" in dq_section["body"]
+    assert "calendar day" in dq_section["body"]
+    assert not _FORBIDDEN_IN_SYSTEM.search(dq_section["body"]), (
+        f"Forbidden language in gap-enriched Data Quality Summary: {dq_section['body']!r}"
+    )

@@ -270,11 +270,27 @@ def _data_quality_section(data_quality: DataQualitySummary) -> ReportSection:
                     f"(earliest available: {tq.earliest_price_date})."
                 )
             else:
+                gap_str = ""
+                if tq.largest_price_date_gap_days is not None:
+                    gap_str = (
+                        f" Largest local price-date gap:"
+                        f" {tq.largest_price_date_gap_days} calendar day(s)"
+                        f" between {tq.largest_price_date_gap_start}"
+                        f" and {tq.largest_price_date_gap_end}."
+                    )
                 lines.append(
-                    f"{tq.ticker}: {tq.price_record_count} price record(s), "
-                    f"earliest {tq.earliest_price_date}, "
-                    f"{tq.days_since_last_price} day(s) since last price as of report date."
+                    f"{tq.ticker}: {tq.price_record_count} price record(s),"
+                    f" {tq.local_price_date_count_on_or_before_report_date}"
+                    f" unique local price date(s) on or before {report_date},"
+                    f" earliest {tq.earliest_price_date},"
+                    f" {tq.days_since_last_price} day(s) since last price"
+                    f" as of report date."
+                    f"{gap_str}"
                 )
+        lines.append(
+            "Gap diagnostics are based only on local price records available"
+            " on or before the report date. No exchange-session calendar is applied."
+        )
         body = "\n".join(lines)
 
     return _make_section(label, body)

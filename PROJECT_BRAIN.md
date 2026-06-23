@@ -148,19 +148,32 @@ Full detail: `docs/MVP_SCOPE.md`.
   No paper trading, no simulated orders, no broker abstraction, no technical indicators,
   no backtesting, no external market data, no scheduler, no notifications introduced.
 
-- **Phase 8B (report explainability + hardening — Option B, Tier 2):** 🔄 **complete —
-  awaiting acceptance audit.** Three new compliance-checked `ReportSection` builders added
-  to `backend/app/reports/builder.py`: "Metric Definitions" (M-001 through M-006 in
+- **Phase 8B (report explainability + hardening — Option B, Tier 2):** ✅ **accepted.**
+  Three new compliance-checked `ReportSection` builders added to
+  `backend/app/reports/builder.py`: "Metric Definitions" (M-001 through M-006 in
   fact-stating language), "Alert Rule Definitions" (CONC-001, DD-001, VOL-001, COV-001
   threshold conditions), and "Data Quality Caveat" (conditional on
   `unpriced_holding_count > 0`; explains which computed facts are affected by incomplete
   local price data). Section ordering updated (D-079). Architecture invariant extended
   with broader forbidden-import scan (D-078). `647 passed, 0 skipped` — all invariants
-  green. Decisions D-075 through D-080 recorded. No paper trading, no simulated orders,
-  no broker abstraction, no technical indicators, no backtesting, no external market data,
-  no scheduler, no notifications, no new API routes introduced.
+  green. Decisions D-075 through D-080 recorded.
 
-**v0.1 implementation accepted. Phase 8A (Tier 2 analytics) accepted. Phase 8B complete — awaiting acceptance audit.**
+- **Phase 8C (local price-date gap diagnostics + repository hardening — Option B, Tier 2):**
+  🔄 **complete — awaiting acceptance audit.** Pure helper `_compute_largest_gap` and four
+  new fields added to `TickerQuality` in `backend/app/metrics/quality.py`:
+  `local_price_date_count_on_or_before_report_date`, `largest_price_date_gap_days`,
+  `largest_price_date_gap_start`, `largest_price_date_gap_end`. "Data Quality Summary"
+  `ReportSection` updated with per-ticker gap facts and gap methodology note (local
+  calendar-day language only; no exchange-session or trading-day claims). Gap fields
+  exposed automatically via existing `data_quality.ticker_quality` serialization path.
+  Architecture invariant extended with four new tests (raw SQL in routes, direct repo
+  imports in routes, quality module layer isolation, system-clock purity). `701 passed,
+  0 skipped` — all invariants green. Decisions D-081 through D-086 recorded. No paper
+  trading, no simulated orders, no broker abstraction, no technical indicators, no
+  backtesting, no external market data, no scheduler, no notifications, no new API routes,
+  no new persistence tables, no new runtime dependencies introduced.
+
+**v0.1 implementation accepted. Phase 8A, 8B accepted. Phase 8C complete — awaiting acceptance audit.**
 Phase 8 further work requires its own dated DECISIONS.md entry and explicit
 human approval before any code is written.
 
@@ -231,6 +244,12 @@ The authoritative log is `docs/DECISIONS.md`. Key locks:
 - **D-078** Phase 8B architecture invariant: broader forbidden-import scan added.
 - **D-079** Phase 8B section placement: final section ordering documented.
 - **D-080** Phase 8B test gate: 647 passed, 0 skipped.
+- **D-081** Phase 8C boundary: local price-date gap diagnostics + hardening, Tier 2 only.
+- **D-082** Phase 8C purity: gap computation is a pure function; report_date caller-provided.
+- **D-083** Phase 8C compliance: gap text passes check_compliance(); local-calendar-day language.
+- **D-084** Phase 8C data model: four new fields on TickerQuality; no new API routes.
+- **D-085** Phase 8C architecture invariant: four new tests; total 12 invariant tests.
+- **D-086** Phase 8C test gate: 701 passed, 0 skipped.
 
 Any change to these requires a new dated entry in `DECISIONS.md` (append-only in spirit).
 
@@ -337,5 +356,6 @@ honest. If it ever drifts from reality, fix it before doing anything else.*
 - v0.1 implementation accepted
 - Phase 8 gate plan created; Option B (Tier 2 analytics) selected
 - Phase 8A accepted (data quality analytics — Option B, Tier 2)
-- Phase 8B complete — awaiting acceptance audit (report explainability + hardening)
+- Phase 8B accepted (report explainability + architecture hardening)
+- Phase 8C complete — awaiting acceptance audit (local price-date gap diagnostics + repository hardening)
 - Further Phase 8 work requires deliberate human approval
