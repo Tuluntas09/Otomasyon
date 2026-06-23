@@ -85,11 +85,15 @@ Full detail: `docs/MVP_SCOPE.md`.
 - **Phase 0 (docs):** ✅ accepted. All `docs/` files present.
 - **Phase 1 (empty skeleton):** ✅ complete. Git repo initialised. Repo boundaries, README,
   pytest harness, and the one substantive test (no-broker/no-execution invariant) exist and
-  pass (`3 passed, 9 skipped`).
-- **Phase 2 (data model + local storage):** ⛔ **not started.** SQLite is deferred entirely
-  to Phase 2 by explicit decision — no schema, migrations, or DB init exist yet.
+  pass.
+- **Phase 2 (data model + local storage):** ✅ **complete.** Domain models (`Holding`,
+  `WatchlistEntry`, `PriceRecord`), typed exceptions, validation helpers, SQLite schema,
+  and three repositories (`HoldingsRepo`, `WatchlistRepo`, `PricesRepo`) implemented.
+  `DataAdapter` ABC defined. `101 passed, 3 skipped` — architecture invariant green.
+  Decisions D-020 through D-023 recorded.
+- **Phase 3 (CSV data adapter):** ⛔ **not started.**
 
-**Next gate:** human review before any Phase 2 work begins.
+**Next gate:** human review before any Phase 3 work begins.
 
 ---
 
@@ -104,6 +108,10 @@ The authoritative log is `docs/DECISIONS.md`. Key locks:
 - **D-017** Duplicate tickers rejected on input (no merge).
 - **D-018** Single portfolio only; no `portfolio_id` required.
 - **D-019** Phase 0 docs accepted for planning, not implementation.
+- **D-020** Synchronous `stdlib sqlite3` for Phase 2; no `aiosqlite`.
+- **D-021** Watchlist duplicate ticker → `DuplicateTickerError`.
+- **D-022** Price duplicate (ticker, price_date) → upsert (idempotent re-ingestion).
+- **D-023** DB path from `OTOMASYON_DB_PATH` env var; default `./data/otomasyon.db`.
 
 Any change to these requires a new dated entry in `DECISIONS.md` (append-only in spirit).
 

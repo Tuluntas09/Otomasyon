@@ -6,7 +6,7 @@
 |---|---|---|
 | 0 | Documentation | ✅ accepted |
 | 1 | Empty skeleton | ✅ complete |
-| 2 | Data model + local storage | ⛔ not started |
+| 2 | Data model + local storage | ✅ complete — awaiting human review |
 | 3 | CSV data adapter | ⛔ not started |
 | 4 | Metrics engine | ⛔ not started |
 | 5 | Alerts + compliance guard | ⛔ not started |
@@ -70,7 +70,7 @@ substantive test: the architectural invariant.
 - Repositories round-trip correctly in in-memory SQLite.
 - No CSV parsing, metrics, alerts, or API routes in this phase.
 
-**Status:** ⛔ Not started. Awaiting Phase 1 human review.
+**Status:** ✅ Complete. Awaiting human review before Phase 3 begins.
 
 ---
 

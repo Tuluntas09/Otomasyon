@@ -72,3 +72,51 @@ v0.1. The single-portfolio constraint is a hard boundary, not an oversight.
 implementation approval. Each subsequent phase requires its own human review gate.
 **Rationale:** Separating doc acceptance from implementation approval prevents scope creep
 and ensures each phase is consciously authorized.
+
+---
+
+## D-020 — SQLite driver: synchronous stdlib sqlite3
+
+**Date:** 2026-06-23 (Phase 2)
+**Decision:** Use synchronous `stdlib sqlite3` for all database access in Phase 2. Do not
+add `aiosqlite` or any async DB driver.
+**Options considered:** `aiosqlite` (rejected — FastAPI async endpoints are not implemented
+until Phase 7; adding async I/O now would add complexity with no benefit).
+**Rationale:** The persistence layer is accessed from synchronous code in Phases 2–6.
+Switching to async can be deferred to Phase 7 when the API layer is introduced, and only if
+benchmarks justify it.
+
+---
+
+## D-021 — Watchlist duplicate ticker behaviour
+
+**Date:** 2026-06-23 (Phase 2)
+**Decision:** Inserting a ticker that already exists in the watchlist raises
+`DuplicateTickerError`. No silent update or merge.
+**Rationale:** Consistent with D-017 (holdings duplicate policy). Explicit rejection forces
+the caller to be intentional; silent merging could mask data entry errors.
+
+---
+
+## D-022 — Price duplicate behaviour on (ticker, price_date)
+
+**Date:** 2026-06-23 (Phase 2)
+**Decision:** Inserting a price record where (ticker, price_date) already exists performs
+an upsert — the newer value wins. No error is raised.
+**Rationale:** End-of-day price CSV files may be re-ingested (e.g., after a correction).
+Upsert makes re-ingestion idempotent. Unlike holdings or watchlist entries, a price
+correction for the same date is a legitimate and expected operation.
+
+---
+
+## D-023 — DB file location: OTOMASYON_DB_PATH environment variable
+
+**Date:** 2026-06-23 (Phase 2)
+**Decision:** The SQLite database file path is read from the `OTOMASYON_DB_PATH` environment
+variable, defaulting to `./data/otomasyon.db` relative to the process working directory.
+**Options considered:** `DATABASE_URL` (rejected — that convention implies a URL-format
+string; `sqlite3` takes a plain file path; using `OTOMASYON_DB_PATH` avoids the mismatch
+and is more discoverable for a local-first tool).
+**Rationale:** Environment variable override allows tests to use `:memory:` without
+patching code. The project-specific name (`OTOMASYON_DB_PATH`) avoids collisions with
+other tools in the same environment.

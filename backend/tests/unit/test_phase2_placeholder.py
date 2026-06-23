@@ -1,22 +1,26 @@
-"""Phase 2 unit test placeholders — skipped until Phase 2 is implemented.
+"""Phase 2 unit tests — replaced from placeholder stubs."""
 
-These stubs define the expected test surface. They are explicitly skipped with a phase-gate
-reason. Do not delete them; replace the skip decorator with real logic in Phase 2.
-"""
-
+from app.core.exceptions import CurrencyError, NegativeQuantityError
+from app.core.models import Holding
 import pytest
 
 
-@pytest.mark.skip(reason="Phase gate: domain models not implemented until Phase 2.")
 def test_holding_model_valid_construction() -> None:
     """A valid Holding with positive quantity and USD currency constructs without error."""
+    h = Holding(ticker="AAPL", quantity=10.0, cost_basis=150.0, currency="USD")
+    assert h.ticker == "AAPL"
+    assert h.quantity == 10.0
+    assert h.cost_basis == 150.0
+    assert h.currency == "USD"
 
 
-@pytest.mark.skip(reason="Phase gate: validation layer not implemented until Phase 2.")
 def test_negative_quantity_raises_error() -> None:
     """Negative quantity input raises NegativeQuantityError."""
+    with pytest.raises(NegativeQuantityError):
+        Holding(ticker="AAPL", quantity=-1.0, cost_basis=100.0)
 
 
-@pytest.mark.skip(reason="Phase gate: validation layer not implemented until Phase 2.")
 def test_non_usd_currency_raises_error() -> None:
     """Non-USD currency input raises CurrencyError."""
+    with pytest.raises(CurrencyError):
+        Holding(ticker="AAPL", quantity=1.0, cost_basis=100.0, currency="EUR")
