@@ -673,3 +673,204 @@ def test_pyproject_has_dev_optional_dependency():
     source = pyproject_path.read_text(encoding="utf-8")
     assert "[project.optional-dependencies]" in source
     assert "dev" in source
+
+
+# ---------------------------------------------------------------------------
+# 13. Phase 8A — data_quality key in API responses
+# ---------------------------------------------------------------------------
+
+
+def test_daily_report_has_data_quality_key(conn, client):
+    """GET /reports/daily response includes a top-level data_quality key."""
+    _seed_simple_portfolio(conn)
+    data = client.get("/reports/daily?report_date=2024-01-15").json()
+    assert "data_quality" in data
+
+
+def test_daily_report_data_quality_is_not_null(conn, client):
+    """data_quality is a structured object, not null."""
+    _seed_simple_portfolio(conn)
+    data = client.get("/reports/daily?report_date=2024-01-15").json()
+    assert data["data_quality"] is not None
+
+
+def test_daily_report_data_quality_shape(conn, client):
+    """data_quality contains the expected top-level keys."""
+    _seed_simple_portfolio(conn)
+    data = client.get("/reports/daily?report_date=2024-01-15").json()
+    dq = data["data_quality"]
+    for key in (
+        "report_date",
+        "total_holding_count",
+        "priced_holding_count",
+        "unpriced_holding_count",
+        "coverage_ratio",
+        "unpriced_tickers",
+        "ticker_quality",
+    ):
+        assert key in dq, f"data_quality missing key: {key!r}"
+
+
+def test_daily_report_data_quality_ticker_quality_shape(conn, client):
+    """Each entry in ticker_quality has the expected keys."""
+    _seed_simple_portfolio(conn)
+    data = client.get("/reports/daily?report_date=2024-01-15").json()
+    tq_list = data["data_quality"]["ticker_quality"]
+    assert len(tq_list) > 0
+    for tq in tq_list:
+        for key in (
+            "ticker",
+            "price_record_count",
+            "earliest_price_date",
+            "latest_price_date",
+            "days_since_last_price",
+            "has_price_on_or_before_report_date",
+        ):
+            assert key in tq, f"ticker_quality entry missing key: {key!r}"
+
+
+def test_daily_report_data_quality_counts_correct(conn, client):
+    """data_quality reflects the seeded portfolio (1 held, 1 priced)."""
+    _seed_simple_portfolio(conn)
+    data = client.get("/reports/daily?report_date=2024-01-15").json()
+    dq = data["data_quality"]
+    assert dq["total_holding_count"] == 1
+    assert dq["priced_holding_count"] == 1
+    assert dq["unpriced_holding_count"] == 0
+    assert dq["coverage_ratio"] == pytest.approx(1.0)
+
+
+def test_daily_report_data_quality_days_since_correct(conn, client):
+    """days_since_last_price is 0 when price is on the report_date itself."""
+    _seed_simple_portfolio(conn)  # AAPL price on 2024-01-15
+    data = client.get("/reports/daily?report_date=2024-01-15").json()
+    dq = data["data_quality"]
+    aapl_tq = next(tq for tq in dq["ticker_quality"] if tq["ticker"] == "AAPL")
+    assert aapl_tq["days_since_last_price"] == 0
+
+
+def test_daily_report_data_quality_unpriced_portfolio(conn, client):
+    """Holding with no price → priced_holding_count == 0, unpriced_tickers populated."""
+    HoldingsRepo(conn).insert(Holding(ticker="AAPL", quantity=10.0, cost_basis=150.0))
+    data = client.get("/reports/daily?report_date=2024-01-15").json()
+    dq = data["data_quality"]
+    assert dq["priced_holding_count"] == 0
+    assert dq["unpriced_holding_count"] == 1
+    assert "AAPL" in dq["unpriced_tickers"]
+
+
+def test_daily_report_has_data_quality_summary_section(conn, client):
+    """Daily report sections include a 'Data Quality Summary' entry."""
+    _seed_simple_portfolio(conn)
+    data = client.get("/reports/daily?report_date=2024-01-15").json()
+    labels = [s["label"] for s in data["sections"]]
+    assert "Data Quality Summary" in labels
+
+
+def test_daily_report_data_quality_section_no_forbidden_language(conn, client):
+    """System-generated Data Quality Summary section contains no forbidden terms."""
+    _seed_simple_portfolio(conn)
+    data = client.get("/reports/daily?report_date=2024-01-15").json()
+    dq_section = next(
+        s for s in data["sections"] if s["label"] == "Data Quality Summary"
+    )
+    assert not _FORBIDDEN_IN_SYSTEM.search(dq_section["label"])
+    assert not _FORBIDDEN_IN_SYSTEM.search(dq_section["body"]), (
+        f"Forbidden language in Data Quality Summary: {dq_section['body']!r}"
+    )
+
+
+def test_weekly_report_has_data_quality_key(conn, client):
+    """GET /reports/weekly response includes a top-level data_quality key."""
+    HoldingsRepo(conn).insert(Holding(ticker="AAPL", quantity=10.0, cost_basis=150.0))
+    _seed_weekly_prices(conn)
+    data = client.get(
+        "/reports/weekly?week_start=2024-01-08&report_date=2024-01-15"
+    ).json()
+    assert "data_quality" in data
+
+
+def test_weekly_report_data_quality_is_not_null(conn, client):
+    HoldingsRepo(conn).insert(Holding(ticker="AAPL", quantity=10.0, cost_basis=150.0))
+    _seed_weekly_prices(conn)
+    data = client.get(
+        "/reports/weekly?week_start=2024-01-08&report_date=2024-01-15"
+    ).json()
+    assert data["data_quality"] is not None
+
+
+def test_weekly_report_data_quality_shape(conn, client):
+    """data_quality in weekly response has the expected structure."""
+    HoldingsRepo(conn).insert(Holding(ticker="AAPL", quantity=10.0, cost_basis=150.0))
+    _seed_weekly_prices(conn)
+    data = client.get(
+        "/reports/weekly?week_start=2024-01-08&report_date=2024-01-15"
+    ).json()
+    dq = data["data_quality"]
+    for key in (
+        "report_date",
+        "total_holding_count",
+        "priced_holding_count",
+        "coverage_ratio",
+        "ticker_quality",
+    ):
+        assert key in dq
+
+
+def test_weekly_report_has_data_quality_summary_section(conn, client):
+    """Weekly report sections include a 'Data Quality Summary' entry."""
+    HoldingsRepo(conn).insert(Holding(ticker="AAPL", quantity=10.0, cost_basis=150.0))
+    _seed_weekly_prices(conn)
+    data = client.get(
+        "/reports/weekly?week_start=2024-01-08&report_date=2024-01-15"
+    ).json()
+    labels = [s["label"] for s in data["sections"]]
+    assert "Data Quality Summary" in labels
+
+
+def test_weekly_report_data_quality_report_date_is_report_date_param(conn, client):
+    """data_quality.report_date matches the report_date query parameter."""
+    HoldingsRepo(conn).insert(Holding(ticker="AAPL", quantity=10.0, cost_basis=150.0))
+    _seed_weekly_prices(conn)
+    data = client.get(
+        "/reports/weekly?week_start=2024-01-08&report_date=2024-01-15"
+    ).json()
+    assert data["data_quality"]["report_date"] == "2024-01-15"
+
+
+# ---------------------------------------------------------------------------
+# 14. Phase 8A — API route boundary and purity checks
+# ---------------------------------------------------------------------------
+
+
+def test_routes_do_not_import_quality_module_persistence_directly():
+    """Route files import compute_data_quality from metrics.quality, not from persistence."""
+    source = _read_routes_source()
+    assert "from app.data.persistence" not in source
+    assert "import PricesRepo" not in source
+
+
+def test_routes_do_not_contain_raw_sql():
+    """Route files contain no raw SQL execution — no .execute() with SQL strings."""
+    source = _read_routes_source()
+    # Routes must not import sqlite3 (already tested), so .execute() with SQL
+    # can't run. Cross-check: no string literals starting with SQL DML keywords.
+    import re
+    sql_string_pattern = re.compile(
+        r'["\'][ \t]*(SELECT|INSERT INTO|UPDATE |DELETE FROM|CREATE TABLE)',
+        re.IGNORECASE,
+    )
+    assert not sql_string_pattern.search(source), (
+        "SQL string literals found in route files — routes must not contain raw SQL"
+    )
+
+
+def test_quality_module_has_no_system_clock_fallback():
+    """metrics/quality.py does not call datetime.now() or date.today()."""
+    quality_path = (
+        Path(__file__).parent.parent.parent / "app" / "metrics" / "quality.py"
+    )
+    source = quality_path.read_text(encoding="utf-8")
+    assert "datetime.now(" not in source
+    assert ".today(" not in source
+    assert "time.time(" not in source

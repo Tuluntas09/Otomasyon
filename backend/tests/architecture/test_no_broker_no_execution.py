@@ -98,3 +98,39 @@ def test_no_advisory_language_in_source() -> None:
         "See RISK_POLICY.md §3 and ALERT_POLICY.md.\n"
         "Affected files:\n" + "\n".join(f"  {v}" for v in violations)
     )
+
+
+def test_quality_module_has_no_broker_imports() -> None:
+    """Phase 8A metrics/quality.py does not import broker or execution libraries."""
+    quality_path = _APP_DIR / "metrics" / "quality.py"
+    if not quality_path.exists():
+        return
+    text = quality_path.read_text(encoding="utf-8", errors="replace")
+    assert not _BROKER_IMPORT_RE.search(text), (
+        "Broker API import detected in metrics/quality.py.\n"
+        "Phase 8A is Tier 2 analytics only — no broker access."
+    )
+
+
+def test_quality_module_has_no_execution_definitions() -> None:
+    """Phase 8A metrics/quality.py defines no execution or paper-trading functions."""
+    quality_path = _APP_DIR / "metrics" / "quality.py"
+    if not quality_path.exists():
+        return
+    text = quality_path.read_text(encoding="utf-8", errors="replace")
+    assert not _EXECUTION_DEF_RE.search(text), (
+        "Execution or paper-trading logic detected in metrics/quality.py.\n"
+        "Phase 8A scope is data quality analytics only."
+    )
+
+
+def test_quality_module_has_no_advisory_language() -> None:
+    """Phase 8A metrics/quality.py contains no advisory signal functions or variables."""
+    quality_path = _APP_DIR / "metrics" / "quality.py"
+    if not quality_path.exists():
+        return
+    text = quality_path.read_text(encoding="utf-8", errors="replace")
+    assert not _ADVISORY_RE.search(text), (
+        "Advisory signal language detected in metrics/quality.py.\n"
+        "Phase 8A is descriptive analytics only — no trade signals."
+    )

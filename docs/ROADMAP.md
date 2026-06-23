@@ -13,7 +13,8 @@
 | 6 | Decision journal | ✅ complete — awaiting human review |
 | 7A | Reports — pure builder | ✅ complete — awaiting human review |
 | 7B | API layer — FastAPI routes | ✅ accepted |
-| 8 | Tier 3 gate review (paper trading research boundary) | ⛔ not started |
+| 8 | Phase 8 gate review (Option B selected — Tier 2 analytics) | ✅ gate accepted |
+| 8A | Data quality analytics (Option B implementation) | ✅ complete |
 
 ---
 
@@ -238,13 +239,46 @@ Journal entries carried verbatim without compliance scanning.
 
 ---
 
-## Phase 8 — Tier 3 gate review
+## Phase 8 — Gate review
 
-**Scope:** Evaluate whether Tier 3 (paper trading research boundary) is appropriate.
-This is a deliberate review gate, not a development phase. Tier 3 requires a new
-`DECISIONS.md` entry and explicit human approval before any code is written.
+**Scope:** Evaluate which boundary option to pursue after v0.1. Options A–D documented
+in `docs/PHASE8_GATE_PLAN.md`. **Option B (richer local analytics, Tier 2 only)**
+selected by human decision.
 
-**Status:** ⛔ Not started.
+**Status:** ✅ Gate accepted. Option B selected. Phase 8A implemented.
+
+---
+
+## Phase 8A — Data quality analytics (Option B, Tier 2)
+
+**Scope:** Pure data quality analytics within Tier 2. No paper trading, no simulated
+execution, no broker abstraction, no technical indicators, no backtesting, no external
+market data.
+
+**Key deliverables:**
+- `backend/app/metrics/quality.py` — `TickerQuality`, `DataQualitySummary` frozen
+  dataclasses; `compute_data_quality(holdings, price_records, report_date)` pure function.
+- `backend/app/reports/models.py` — `data_quality: DataQualitySummary | None = None`
+  field added to `DailyReport` and `WeeklyReport`.
+- `backend/app/reports/builder.py` — `_data_quality_section()` builder; `data_quality`
+  optional parameter added to `build_daily_report` and `build_weekly_report`.
+- `backend/app/api/routes/reports.py` — `compute_data_quality` called in orchestration;
+  result passed to builders; `data_quality` exposed as top-level key in both API responses.
+- `backend/tests/unit/test_data_quality.py` — 71 unit tests; no DB fixtures.
+- `backend/tests/integration/test_api_reports.py` — 14 new integration tests.
+- `backend/tests/architecture/test_no_broker_no_execution.py` — 3 new invariant tests.
+- `docs/DECISIONS.md` — D-067 through D-074 recorded.
+
+**Acceptance criteria:**
+- Architecture invariant still passes (6 tests total — original 3 + 3 new).
+- Data quality function is pure: no I/O, no system clock, no persistence imports.
+- "Data Quality Summary" section present in daily and weekly reports when data_quality provided.
+- All section text passes check_compliance().
+- `data_quality` top-level key in both API responses, populated via dataclasses.asdict().
+- No new runtime dependencies.
+- Total test count: 585 passed, 0 skipped.
+
+**Status:** ✅ Complete.
 
 ---
 

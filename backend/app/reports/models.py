@@ -4,9 +4,12 @@ All dataclasses are immutable after construction.
 No I/O, no DB access, no compliance scanning here — this module is plain value objects.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 
 from app.journal.models import JournalEntry
+from app.metrics.quality import DataQualitySummary
 
 
 @dataclass(frozen=True)
@@ -27,12 +30,15 @@ class DailyReport:
 
     sections: system-generated, compliance-checked text blocks.
     journal_entries: user-authored entries carried verbatim; NOT compliance-scanned.
+    data_quality: structured price history depth summary (Phase 8A); None when
+    the caller did not supply a DataQualitySummary.
     """
 
     report_date: str
     report_type: str
     sections: list[ReportSection]
     journal_entries: list[JournalEntry]
+    data_quality: DataQualitySummary | None = None
 
 
 @dataclass(frozen=True)
@@ -41,6 +47,8 @@ class WeeklyReport:
 
     sections: system-generated, compliance-checked text blocks.
     journal_entries: user-authored entries carried verbatim; NOT compliance-scanned.
+    data_quality: structured price history depth summary (Phase 8A); None when
+    the caller did not supply a DataQualitySummary.
     """
 
     report_date: str
@@ -48,3 +56,4 @@ class WeeklyReport:
     report_type: str
     sections: list[ReportSection]
     journal_entries: list[JournalEntry]
+    data_quality: DataQualitySummary | None = None

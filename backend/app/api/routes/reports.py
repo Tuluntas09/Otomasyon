@@ -31,6 +31,7 @@ from app.metrics.engine import (
     compute_portfolio_snapshot,
     compute_volatility_proxy,
 )
+from app.metrics.quality import compute_data_quality
 from app.reports.builder import build_daily_report, build_weekly_report
 
 router = APIRouter()
@@ -77,7 +78,10 @@ def get_daily_report(
     drawdown = compute_drawdown(holdings, prices)
     volatility = compute_volatility_proxy(holdings, prices)
     alert_results = evaluate_alerts(snapshot, drawdown, volatility, AlertConfig())
-    report = build_daily_report(report_date, snapshot, alert_results, journal_entries)
+    data_quality = compute_data_quality(holdings, prices, report_date)
+    report = build_daily_report(
+        report_date, snapshot, alert_results, journal_entries, data_quality
+    )
     return dataclasses.asdict(report)
 
 
@@ -111,8 +115,9 @@ def get_weekly_report(
     drawdown = compute_drawdown(holdings, prices)
     volatility = compute_volatility_proxy(holdings, prices)
     alert_results = evaluate_alerts(snapshot, drawdown, volatility, AlertConfig())
+    data_quality = compute_data_quality(holdings, prices, report_date)
     report = build_weekly_report(
         report_date, week_start, snapshot, drawdown, volatility,
-        alert_results, journal_entries,
+        alert_results, journal_entries, data_quality,
     )
     return dataclasses.asdict(report)

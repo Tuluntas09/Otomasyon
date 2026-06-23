@@ -17,6 +17,7 @@ from app.compliance.guard import check_compliance
 from app.core.exceptions import InvalidDateError
 from app.core.validation import validate_iso_date
 from app.journal.models import JournalEntry
+from app.metrics.quality import DataQualitySummary
 from app.metrics.results import DrawdownResult, PortfolioSnapshot, VolatilityResult
 from app.reports.models import DailyReport, ReportSection, WeeklyReport
 
@@ -165,6 +166,46 @@ def _disclaimer_section() -> ReportSection:
     return _make_section(label, body)
 
 
+def _data_quality_section(data_quality: DataQualitySummary) -> ReportSection:
+    label = "Data Quality Summary"
+    total = data_quality.total_holding_count
+    priced = data_quality.priced_holding_count
+    ratio = data_quality.coverage_ratio
+    report_date = data_quality.report_date
+
+    if total == 0:
+        body = "No positions recorded. Price history coverage: no data to compute."
+    else:
+        lines: list[str] = [
+            f"Price history coverage as of {report_date}: "
+            f"{priced} of {total} position(s) have at least one price record "
+            f"on or before the report date. Coverage ratio: {ratio:.2%}."
+        ]
+        if data_quality.unpriced_tickers:
+            tickers_str = ", ".join(data_quality.unpriced_tickers)
+            lines.append(
+                f"Positions without price data on or before {report_date}: {tickers_str}."
+            )
+        for tq in data_quality.ticker_quality:
+            if tq.price_record_count == 0:
+                lines.append(f"{tq.ticker}: no price records.")
+            elif tq.days_since_last_price is None:
+                lines.append(
+                    f"{tq.ticker}: {tq.price_record_count} price record(s), "
+                    f"none on or before {report_date} "
+                    f"(earliest available: {tq.earliest_price_date})."
+                )
+            else:
+                lines.append(
+                    f"{tq.ticker}: {tq.price_record_count} price record(s), "
+                    f"earliest {tq.earliest_price_date}, "
+                    f"{tq.days_since_last_price} day(s) since last price as of report date."
+                )
+        body = "\n".join(lines)
+
+    return _make_section(label, body)
+
+
 def _week_range_section(week_start: str, report_date: str) -> ReportSection:
     label = "Week Range"
     body = f"Period: {week_start} to {report_date}."
@@ -214,17 +255,26 @@ def build_daily_report(
     snapshot: PortfolioSnapshot,
     alert_results: list[AlertResult],
     journal_entries: list[JournalEntry],
+    data_quality: DataQualitySummary | None = None,
 ) -> DailyReport:
     """Compose a DailyReport from already-computed result objects.
 
     Validates report_date. Does not access DB, filesystem, network, or system clock.
     Raises InvalidDateError for an invalid report_date.
     Raises ComplianceViolationError if any system-generated section text is non-compliant.
+
+    When data_quality is provided a 'Data Quality Summary' section is included
+    after the Data Coverage section, and data_quality is stored on the returned
+    DailyReport for structured API serialisation.
     """
     validate_iso_date(report_date)
-    sections = [
+    sections: list[ReportSection] = [
         _header_section(report_date, "daily"),
         _coverage_section(snapshot),
+    ]
+    if data_quality is not None:
+        sections.append(_data_quality_section(data_quality))
+    sections += [
         _snapshot_section(snapshot),
         _weights_section(snapshot),
         _alert_section(alert_results),
@@ -237,6 +287,7 @@ def build_daily_report(
         report_type="daily",
         sections=sections,
         journal_entries=list(journal_entries),
+        data_quality=data_quality,
     )
 
 
@@ -248,6 +299,7 @@ def build_weekly_report(
     volatility: VolatilityResult | None,
     alert_results: list[AlertResult],
     journal_entries: list[JournalEntry],
+    data_quality: DataQualitySummary | None = None,
 ) -> WeeklyReport:
     """Compose a WeeklyReport from already-computed result objects.
 
@@ -255,6 +307,10 @@ def build_weekly_report(
     Does not access DB, filesystem, network, or system clock.
     Raises InvalidDateError for invalid dates or if week_start is after report_date.
     Raises ComplianceViolationError if any system-generated section text is non-compliant.
+
+    When data_quality is provided a 'Data Quality Summary' section is included
+    after the Data Coverage section, and data_quality is stored on the returned
+    WeeklyReport for structured API serialisation.
     """
     validate_iso_date(report_date)
     validate_iso_date(week_start)
@@ -262,10 +318,14 @@ def build_weekly_report(
         raise InvalidDateError(
             f"week_start {week_start!r} must be on or before report_date {report_date!r}."
         )
-    sections = [
+    sections: list[ReportSection] = [
         _header_section(report_date, "weekly"),
         _week_range_section(week_start, report_date),
         _coverage_section(snapshot),
+    ]
+    if data_quality is not None:
+        sections.append(_data_quality_section(data_quality))
+    sections += [
         _snapshot_section(snapshot),
         _drawdown_section(drawdown),
         _volatility_section(volatility),
@@ -281,4 +341,5 @@ def build_weekly_report(
         report_type="weekly",
         sections=sections,
         journal_entries=list(journal_entries),
+        data_quality=data_quality,
     )

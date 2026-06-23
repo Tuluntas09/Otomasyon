@@ -135,9 +135,22 @@ Full detail: `docs/MVP_SCOPE.md`.
   (D-066). No persistence repo imports in route modules. `500 passed, 0 skipped` —
   architecture invariant green. Decisions D-058 through D-066 recorded.
 
-**v0.1 implementation accepted.** Phase 8 (Tier 3 gate review — paper trading research
-boundary) requires its own dated DECISIONS.md entry and explicit human approval before
-any code is written. It is not automatic.
+- **Phase 8A (data quality analytics — Option B, Tier 2):** ✅ **complete.** Pure data
+  quality function `compute_data_quality(holdings, price_records, report_date)` implemented
+  under `backend/app/metrics/quality.py`. Returns `DataQualitySummary` (portfolio-level
+  coverage counts, coverage ratio, unpriced tickers list) and per-ticker `TickerQuality`
+  (price record count, earliest/latest dates, days since last price relative to
+  caller-provided report_date, has_price_on_or_before_report_date). "Data Quality Summary"
+  `ReportSection` added to both daily and weekly reports; all section text compliance-checked.
+  `data_quality` exposed as a top-level key in both API responses via `dataclasses.asdict()`.
+  Architecture invariant extended with three targeted tests for `metrics/quality.py`.
+  `585 passed, 0 skipped` — all invariants green. Decisions D-067 through D-074 recorded.
+  No paper trading, no simulated orders, no broker abstraction, no technical indicators,
+  no backtesting, no external market data, no scheduler, no notifications introduced.
+
+**v0.1 implementation accepted. Phase 8A (Tier 2 analytics) complete.**
+Phase 8 further work (if any) requires its own dated DECISIONS.md entry and explicit
+human approval before any code is written.
 
 ---
 
@@ -303,4 +316,6 @@ honest. If it ever drifts from reality, fix it before doing anything else.*
 - Phase 7A complete (pure report builder)
 - Phase 7B accepted
 - v0.1 implementation accepted
-- Phase 8 not started — requires deliberate human approval
+- Phase 8 gate plan created; Option B (Tier 2 analytics) selected
+- Phase 8A complete (data quality analytics — Option B, Tier 2)
+- Further Phase 8 work requires deliberate human approval

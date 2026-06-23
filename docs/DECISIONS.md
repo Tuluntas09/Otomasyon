@@ -692,3 +692,116 @@ access — no direct persistence repo imports in route modules.
 **Rationale:** Maintains the "all data through adapters" invariant from ARCHITECTURE.md.
 Avoids direct persistence repo imports from api/routes/, consistent with the approved
 Phase 7B implementation constraints.
+
+---
+
+## D-067 — Phase 8A boundary: Option B approved, Tier 2 only
+
+**Date:** 2026-06-23 (Phase 8A)
+**Decision:** Phase 8A implements richer local analytics within Tier 2 only, per Option B
+from `docs/PHASE8_GATE_PLAN.md`. The selected narrow scope for Phase 8A is data quality
+analytics: per-ticker price history depth (`TickerQuality`), portfolio coverage summary
+(`DataQualitySummary`), a "Data Quality Summary" `ReportSection` in daily and weekly
+reports, and a top-level `data_quality` key in the API response via `dataclasses.asdict()`.
+No Tier 3 (paper trading), Tier 4 (live trading), or any execution-adjacent feature is
+included.
+**Options considered:** Option A (stay read-only, no change), Option C (Tier 3 research),
+Option D (reject/defer).
+**Rationale:** Option B extends analytical depth without crossing any safety boundary.
+Data quality analytics are the lowest-risk, highest-value improvement available within
+the existing architecture: they surface whether computed metrics are well-supported by
+local price data, using only data already stored in the local SQLite database.
+
+---
+
+## D-068 — Phase 8A purity constraint: compute_data_quality is a pure function
+
+**Date:** 2026-06-23 (Phase 8A)
+**Decision:** `compute_data_quality(holdings, price_records, report_date)` is a pure
+function: no I/O, no system clock, no environment variables, no persistence imports, no
+network access. All data arrives as function arguments. `report_date` is always
+caller-provided (consistent with D-031 and D-056). Enforced by boundary import tests in
+`test_data_quality.py` and the architecture invariant.
+**Rationale:** Consistency with the purity invariant established for the metrics engine
+(D-030). Pure functions are testable without fixtures and composable with any future
+orchestration layer.
+
+---
+
+## D-069 — Phase 8A compliance constraint: Data Quality Summary text is checked
+
+**Date:** 2026-06-23 (Phase 8A)
+**Decision:** All system-generated strings placed in the "Data Quality Summary"
+`ReportSection` label and body pass `check_compliance()` before construction, consistent
+with D-054. No compliance guard wordlist extensions are required for data quality language
+(coverage counts, date strings, ticker names, day counts). No advisory language is used
+or required.
+**Rationale:** Consistent with D-039 and D-054. The compliance guard is not bypassed or
+narrowed for new features.
+
+---
+
+## D-070 — Phase 8A architecture invariant: extended to cover metrics/quality.py
+
+**Date:** 2026-06-23 (Phase 8A)
+**Decision:** `backend/tests/architecture/test_no_broker_no_execution.py` is extended
+with three targeted tests for `metrics/quality.py`: no broker imports, no execution
+definitions, no advisory language. These run alongside the existing three invariant tests.
+**Rationale:** The invariant test grows with the codebase. New modules must be covered
+before they are accepted, not after.
+
+---
+
+## D-071 — Phase 8A data quality result format
+
+**Date:** 2026-06-23 (Phase 8A)
+**Decision:** Data quality results are two frozen dataclasses in
+`backend/app/metrics/quality.py`:
+- `TickerQuality`: ticker, price_record_count, earliest_price_date, latest_price_date,
+  days_since_last_price (relative to caller-provided report_date; None if no price on or
+  before report_date), has_price_on_or_before_report_date.
+- `DataQualitySummary`: report_date, total_holding_count, priced_holding_count,
+  unpriced_holding_count, coverage_ratio, unpriced_tickers, ticker_quality.
+Both are added as `data_quality: DataQualitySummary | None = None` on `DailyReport` and
+`WeeklyReport` (optional field with default None for backward compatibility).
+**Rationale:** Consistent with the frozen-dataclass result pattern established in Phases
+4–7A. Optional field preserves backward compatibility with existing tests and call sites.
+
+---
+
+## D-072 — Phase 8A API: data_quality exposed via dataclasses.asdict()
+
+**Date:** 2026-06-23 (Phase 8A)
+**Decision:** `compute_data_quality` is called in the API orchestration sequence (D-062)
+immediately after metrics computation. The result is passed to both `build_daily_report`
+and `build_weekly_report` and stored on the returned report dataclass. `dataclasses.asdict()`
+recursively serialises `DataQualitySummary` and `TickerQuality` to nested dicts, exposing
+`data_quality` as a top-level key in the JSON response. All routes remain GET-only.
+No persistence repo imports added to route modules. No new abstract method added to
+`DataAdapter` — the existing `get_holdings()` and `get_prices()` supply all required data.
+**Rationale:** Consistent with D-058, D-062, D-063, and D-066. No write endpoints. No
+adapter boundary change required for this scope.
+
+---
+
+## D-073 — Phase 8A dependencies: no new runtime dependencies
+
+**Date:** 2026-06-23 (Phase 8A)
+**Decision:** Phase 8A introduces no new runtime dependencies. `pyproject.toml`
+`dependencies` remains `["fastapi>=0.100.0"]`. All new computation uses Python stdlib
+only (`datetime`, `dataclasses`). No third-party library is required.
+**Rationale:** Consistent with D-024 (stdlib-only policy) and the zero-additional-
+dependency posture maintained through Phases 2–7B.
+
+---
+
+## D-074 — Phase 8A test gate: 585 tests passed, 0 skipped
+
+**Date:** 2026-06-23 (Phase 8A)
+**Decision:** Phase 8A implementation is accepted when `python -m pytest backend/tests/`
+returns 585 passed, 0 skipped. The 85 new tests cover: `compute_data_quality` pure
+function (unit), report builder integration (unit), API response shape and content
+(integration), route boundary (no repo imports, no raw SQL), purity (no system clock),
+compliance (no forbidden language in generated text), and architecture invariant extension.
+**Rationale:** Consistent with the per-phase test gate established across Phases 2–7B.
+Each new module and integration path must have dedicated tests before acceptance.
